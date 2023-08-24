@@ -3,11 +3,12 @@ import 'package:shop_audit/global/database.dart';
 import 'package:shop_audit/pages/login.dart';
 import 'package:shop_audit/pages/points.dart';
 import 'package:shop_audit/pages/report.dart';
-import 'package:shop_audit/map_screen.dart';
+import 'package:shop_audit/pages/map_screen.dart';
 
 
 Future<void> main() async{
   await DatabaseClient().openDB();
+  DatabaseClient().getShopPoints();
   runApp(const MyApp());
 }
 

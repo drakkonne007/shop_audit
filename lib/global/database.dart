@@ -28,7 +28,7 @@ class DatabaseClient
     if(PointFromDbHandler().isNeedLoad != true){
       return;
     }
-    var result = await connection.query("SELECT * FROM shop_audit_clear.shop WHERE enabled=true");
+    var result = await connection.query("SELECT * FROM shop_audit_clear.shop WHERE enabled=true ORDER BY date_time_created DESC");
     var columnNames = result.columnDescriptions;
     Map<String,int> map = {};
     for(int i=0;i<columnNames.length;i++){
@@ -55,11 +55,11 @@ class DatabaseClient
       }
       if(map.containsKey('start_work_time')){
         print(row[map['start_work_time']!]);
-        point.startWorkingTime = row[map['start_work_time']!] ?? DateTime.now();
+        point.startWorkingTime = row[map['start_work_time']!] ?? DateTime(2000);
       }
       if(map.containsKey('finish_work_time')){
         print(row[map['finish_work_time']!]);
-        point.endWorkingTime = row[map['finish_work_time']!] ?? DateTime.now();
+        point.endWorkingTime = row[map['finish_work_time']!] ?? DateTime(2000);
       }
       if(map.containsKey('date_time_created')){
         print(row[map['date_time_created']!]);
@@ -73,11 +73,10 @@ class DatabaseClient
         print(row[map['id']!]);
         point.id = row[map['id']!] as int;
       }
-      PointFromDbHandler().pointsFromDb.value.add(point);
+      PointFromDbHandler().pointsFromDb.value.putIfAbsent(point.id, () => point);
     }
     PointFromDbHandler().isNeedLoad = false;
     PointFromDbHandler().pointsFromDb.notifyListeners();
-    print('loadObjects');
   }
 
   Future<bool> checkAccess(String login, String password)async
