@@ -2,28 +2,35 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shop_audit/global/database.dart';
 
 class LoginPage extends StatefulWidget {
+
+  late final SharedPreferences prefs;
+
 
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
-  String _login = '';
-  String _password = '';
+
   bool _isCorrect = true;
-  String _enterText = 'Войти';
+  final TextEditingController loginController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  bool isLoading = false;
 
   Future<void> checkAccess()async{
-    bool answer = await DatabaseClient().checkAccess(_login, _password);
-    _enterText = 'Войти';
+    bool answer = await DatabaseClient().checkAccess(loginController.text, passwordController.text);
     if(answer == true){
+      widget.prefs = await SharedPreferences.getInstance();
+      widget.prefs.setBool('isLogged', true);
       Navigator.of(context).pushNamedAndRemoveUntil('/mapScreen', (route) => false);
     }else{
       setState(() {
         _isCorrect = false;
+        isLoading = false;
       });
     }
   }
@@ -31,9 +38,8 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _login = '';
-    _password = '';
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,18 +59,17 @@ class _LoginPageState extends State<LoginPage> {
                   SizedBox(
                     width: MediaQuery.of(context).size.width * 0.6,
                     child: TextFormField(
-                      initialValue: _login,
-                      onChanged: (value) {
-                        _login = value;
-                      },
+                      controller: loginController,
                     ),
                   ),
                   IconButton(onPressed: (){
-                    _login = '';
-                    setState(() {});
+                    setState(() {
+                      loginController.text = '';
+                    });
                   }, icon: const Icon(Icons.cancel_outlined))
                 ],
               ),
+              const SizedBox(height: 20,),
               Text('Пароль'),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -73,25 +78,25 @@ class _LoginPageState extends State<LoginPage> {
                   SizedBox(
                     width: MediaQuery.of(context).size.width * 0.6,
                     child: TextFormField(
-                      initialValue: _password,
-                      onChanged: (value) {
-                        _password = value;
-                      },
+                      controller: passwordController,
                     ),
                   ),
                   IconButton(onPressed: (){
-                    _password = '';
-                    setState(() {});
+                    setState(() {
+                      passwordController.text = '';
+                    });
                   }, icon: const Icon(Icons.cancel_outlined))
                 ],
               ),
-              ElevatedButton(onPressed: (){
+              const SizedBox(height: 20,),
+              isLoading ? const CircularProgressIndicator() : ElevatedButton(onPressed: (){
                 setState(() {
-                  _enterText = 'Ждёмс...';
+                  isLoading = true;
                 });
                 checkAccess();
               },
-                  child: Text(_enterText))
+                  child: Text('Войти')
+              ),
             ]
         ),
       ),

@@ -4,6 +4,8 @@ import 'dart:math';
 import 'package:flutter/cupertino.dart';
 import 'package:shop_audit/component/location_global.dart';
 
+double metersInOneAngle = 40075.0 / 360.0 * 1000.0;
+
 enum SortType
 {
   None,
@@ -23,6 +25,8 @@ class PointFromDb
   DateTime endWorkingTime = DateTime.now();
   DateTime dateTimeCreated = DateTime.now();
   bool isWasReport = false;
+  bool isNeedDrawBySort = true;
+  bool isNeedDrawByCustom = true;
 }
 
 class PointFromDbHandler
@@ -33,52 +37,77 @@ class PointFromDbHandler
   }
   PointFromDbHandler._internal();
   ValueNotifier<Map<int,PointFromDb>> pointsFromDb = ValueNotifier({});
-  bool isNeedLoad = true;
-  Set<int> uselessPoints = {};
+  Set<int> customNeedsPoint = {};
   SortType sortType = SortType.None;
+  Map<int,PointFromDb> cachedPoints = {};
+  int activeShop = 0; //айди магазина для отчёта
 
-  List<PointFromDb> getUserPoints()
+  bool isNeedShop(int id){
+    if(!pointsFromDb.value.containsKey(id)){
+      return false;
+    }
+    return pointsFromDb.value[id]!.isNeedDrawByCustom && pointsFromDb.value[id]!.isNeedDrawBySort;
+  }
+
+  void showAllPointByUser()
   {
-    print('parent uselessPoints $uselessPoints');
-    List<PointFromDb> list = [];
     List<PointFromDb> allList = pointsFromDb.value.values.toList();
-    uselessPoints = {};
+    for(int i=0;i<allList.length;i++){
+      allList[i].isNeedDrawByCustom = true;
+    }
+  }
+
+  List<PointFromDb> getFilteredPoints()
+  {
+    List<PointFromDb> allList = pointsFromDb.value.values.toList();
+    List<PointFromDb> filteredList = [];
     switch(sortType){
       case SortType.None: {
         for(int i=0;i<allList.length;i++){
-          list.add(allList[i]);
+          allList[i].isNeedDrawBySort = true;
+          if(allList[i].isNeedDrawByCustom) {
+            filteredList.add(allList[i]);
+          }
         }
-        return list;
+        return filteredList;
       }
       case SortType.Distance:
         var selfLocation = LocationHandler().currentLocation;
         for(int i=0;i<allList.length;i++){
-          if(sqrt(pow(allList[i].x - selfLocation.lat,2) + pow(allList[i].y - selfLocation.long,2)) *  40075.0 / 360.0 * 1000.0 > 5000){
-            uselessPoints.add(allList[i].id);
-            print('add useless by distance');
+          if(sqrt(pow(allList[i].x - selfLocation.latitude,2) + pow(allList[i].y - selfLocation.longitude,2)) *  metersInOneAngle > 5000){
+            allList[i].isNeedDrawBySort = false;
             continue;
           }
-          list.add(allList[i]);
+          allList[i].isNeedDrawBySort = true;
+          if(allList[i].isNeedDrawByCustom) {
+            filteredList.add(allList[i]);
+          }
         }
-        return list;
+        return filteredList;
       case SortType.DateTimeCreated:
         for(int i=0;i<allList.length;i++){
           if(allList[i].dateTimeCreated.millisecondsSinceEpoch < DateTime.now().add(const Duration(days: -30)).millisecondsSinceEpoch){
-            uselessPoints.add(allList[i].id);
+            allList[i].isNeedDrawBySort = false;
             continue;
           }
-          list.add(allList[i]);
+          allList[i].isNeedDrawBySort = true;
+          if(allList[i].isNeedDrawByCustom) {
+            filteredList.add(allList[i]);
+          }
         }
-        return list;
+        return filteredList;
       case SortType.IsNeedReport:
         for(int i=0;i<allList.length;i++){
           if(allList[i].isWasReport){
-            uselessPoints.add(allList[i].id);
+            allList[i].isNeedDrawBySort = false;
             continue;
           }
-          list.add(allList[i]);
+          allList[i].isNeedDrawBySort = true;
+          if(allList[i].isNeedDrawByCustom) {
+            filteredList.add(allList[i]);
+          }
         }
-        return list;
+        return filteredList;
     }
   }
 }

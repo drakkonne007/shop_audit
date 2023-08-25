@@ -16,12 +16,10 @@ class PointsPage extends StatefulWidget
 class _PointsPageState extends State<PointsPage> {
 
   var listAllPoints = [];
-  Set<int> _uselessPoints = {};
 
   @override
   void initState() {
     super.initState();
-    _uselessPoints = PointFromDbHandler().uselessPoints;
     listAllPoints = PointFromDbHandler().pointsFromDb.value.values.toList();
     PointFromDbHandler().pointsFromDb.addListener(updateListAllPoint);
   }
@@ -36,11 +34,8 @@ class _PointsPageState extends State<PointsPage> {
   {
     setState(() {
       listAllPoints = PointFromDbHandler().pointsFromDb.value.values.toList();
-      _uselessPoints = PointFromDbHandler().uselessPoints;
     });
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -50,22 +45,31 @@ class _PointsPageState extends State<PointsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children:[
               ElevatedButton(onPressed: (){
+                PointFromDbHandler().showAllPointByUser();
+                PointFromDbHandler().pointsFromDb.notifyListeners();
+              }, child: Text('Сбросить отмеченные ыручную')
+              ),
+              ElevatedButton(onPressed: (){
                 PointFromDbHandler().sortType = SortType.None;
+                PointFromDbHandler().showAllPointByUser();
                 PointFromDbHandler().pointsFromDb.notifyListeners();
               }, child: Text('Все')
               ),
               ElevatedButton(onPressed: (){
                 PointFromDbHandler().sortType = SortType.Distance;
+                PointFromDbHandler().showAllPointByUser();
                 PointFromDbHandler().pointsFromDb.notifyListeners();
               }, child: Text('Ближе 5 километров')
               ),
               ElevatedButton(onPressed: (){
                 PointFromDbHandler().sortType = SortType.IsNeedReport;
+                PointFromDbHandler().showAllPointByUser();
                 PointFromDbHandler().pointsFromDb.notifyListeners();
               }, child: Text('Только нужные')
               ),
               ElevatedButton(onPressed: (){
                 PointFromDbHandler().sortType = SortType.DateTimeCreated;
+                PointFromDbHandler().showAllPointByUser();
                 PointFromDbHandler().pointsFromDb.notifyListeners();
               }, child: Text('За последний месяц')
               ),
@@ -75,12 +79,18 @@ class _PointsPageState extends State<PointsPage> {
                       itemCount: listAllPoints.length,
                       itemBuilder: (BuildContext context, int index) {
                         print('refreshList');
-                        print(_uselessPoints);
                         return Row(children:
                         [
                           Checkbox(
-                            value: _uselessPoints.contains(listAllPoints[index].id) ? false : true,
-                            onChanged: (val){},
+                            value: PointFromDbHandler().isNeedShop(listAllPoints[index].id),
+                            onChanged: (val){
+                              if(val == true){
+                                PointFromDbHandler().pointsFromDb.value[listAllPoints[index].id]!.isNeedDrawByCustom = true;
+                              }else{
+                                PointFromDbHandler().pointsFromDb.value[listAllPoints[index].id]!.isNeedDrawByCustom = false;
+                              }
+                              PointFromDbHandler().pointsFromDb.notifyListeners();
+                            },
                           ),
                           Text(listAllPoints[index].name)
                         ]);

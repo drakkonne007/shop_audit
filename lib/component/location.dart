@@ -1,26 +1,26 @@
 class AppLatLong
 {
-  final double lat;
-  final double long;
+  final double latitude;
+  final double longitude;
 
   const AppLatLong({
-    required this.lat,
-    required this.long,
+    required this.latitude,
+    required this.longitude,
   });
 }
 
 class MoscowLocation extends AppLatLong
 {
   const MoscowLocation({
-    super.lat = 55.7522200,
-    super.long = 37.6155600,
+    super.latitude = 55.7522200,
+    super.longitude = 37.6155600,
   });
 }
 
 class BishkekLocation extends AppLatLong
 {
   const BishkekLocation({
-    super.lat = 42.882004,
-    super.long = 74.582748,
+    super.latitude = 42.882004,
+    super.longitude = 74.582748,
   });
 }

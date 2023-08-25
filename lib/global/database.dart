@@ -11,7 +11,7 @@ class DatabaseClient
   }
   DatabaseClient._internal();
 
-  var connection = PostgreSQLConnection("10.11.100.189", 5432, "shop_audit_clear", username: "postgres", password: "1");
+  var connection = PostgreSQLConnection("192.168.56.1", 5432, "shop_audit_clear", username: "postgres", password: "1");
 
   Future<bool> openDB()async
   {
@@ -22,12 +22,15 @@ class DatabaseClient
     return true;
   }
 
+  void loadReports() async
+  {
+    var result = await connection.query("SELECT * FROM shop_audit_clear.shop WHERE enabled=true ORDER BY date_time_created DESC");
+
+  }
+
   void getShopPoints() async
   {
     print('start getShopPoints');
-    if(PointFromDbHandler().isNeedLoad != true){
-      return;
-    }
     var result = await connection.query("SELECT * FROM shop_audit_clear.shop WHERE enabled=true ORDER BY date_time_created DESC");
     var columnNames = result.columnDescriptions;
     Map<String,int> map = {};
@@ -75,7 +78,6 @@ class DatabaseClient
       }
       PointFromDbHandler().pointsFromDb.value.putIfAbsent(point.id, () => point);
     }
-    PointFromDbHandler().isNeedLoad = false;
     PointFromDbHandler().pointsFromDb.notifyListeners();
   }
 

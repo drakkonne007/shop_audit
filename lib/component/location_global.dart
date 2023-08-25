@@ -9,6 +9,7 @@ class LocationHandler
   }
   LocationHandler._internal();
 
+
   AppLatLong currentLocation = BishkekLocation();
 
 }
