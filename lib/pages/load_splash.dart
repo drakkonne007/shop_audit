@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shop_audit/component/camera_handler.dart';
 import 'package:shop_audit/global/database.dart';
 
 class LoadSplash extends StatefulWidget {
@@ -45,7 +44,6 @@ class _LoadSplashState extends State<LoadSplash> {
   Widget build(BuildContext context) {
     isConnect ? {
       loadDB(),
-      CameraHandler().loadCameras()
     } : (){};
     return Scaffold(
         body:Center(

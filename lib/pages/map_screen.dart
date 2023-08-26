@@ -30,22 +30,21 @@ class _MapScreenState extends State<MapScreen>
   @override
   void initState()
   {
-    super.initState();
     _mapObjects = returnListMapObjects();
     _initPermission().ignore();
     PointFromDbHandler().pointsFromDb.addListener(_changeObjects);
     _timerSelfLocation = Timer.periodic(const Duration(seconds: 10),(timer){
       _fetchCurrentLocation(false);
     });
+    super.initState();
   }
 
   @override
   void dispose()
   {
-    super.dispose();
     _timerSelfLocation.cancel();
     PointFromDbHandler().pointsFromDb.removeListener(_changeObjects);
-
+    super.dispose();
   }
 
   void _refreshActiveShops()
@@ -301,7 +300,8 @@ class _MapScreenState extends State<MapScreen>
           body: Column(
               children: [
                 Expanded(
-                    child:ListView.builder(
+                    child:ListView.separated(
+                        separatorBuilder: (BuildContext context, int index) => const Divider(),
                         itemCount: _activeShops.length,
                         itemBuilder: (BuildContext context, int index){
                           return ElevatedButton(onPressed: (){

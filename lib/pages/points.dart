@@ -19,15 +19,15 @@ class _PointsPageState extends State<PointsPage> {
 
   @override
   void initState() {
-    super.initState();
     listAllPoints = PointFromDbHandler().pointsFromDb.value.values.toList();
     PointFromDbHandler().pointsFromDb.addListener(updateListAllPoint);
+    super.initState();
   }
 
   @override
   void dispose() {
-    super.dispose();
     PointFromDbHandler().pointsFromDb.removeListener(updateListAllPoint);
+    super.dispose();
   }
 
   void updateListAllPoint()
