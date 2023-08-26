@@ -72,14 +72,14 @@ class _ReportPageState extends State<ReportPage> {
                         }
                       },
                       icon: const Icon(Icons.photo_camera)),
-                 IconButton(
-                     onPressed: ()async{
-                       final List<XFile> images = await _picker.pickMultiImage();
-                       for(XFile image in images){
-                         _images.add(image);
-                       }
-                     }
-                     , icon: const Icon(Icons.photo)),
+                  IconButton(
+                      onPressed: ()async{
+                        final List<XFile> images = await _picker.pickMultiImage();
+                        for(XFile image in images){
+                          _images.add(image);
+                        }
+                      }
+                      , icon: const Icon(Icons.photo)),
                   ElevatedButton(
                       onPressed: ()async{
                         if(_images.length == 0){
@@ -112,31 +112,31 @@ class _ReportPageState extends State<ReportPage> {
                         separatorBuilder: (BuildContext context, int index) => const Divider(),
                         itemCount: _images.length,
                         itemBuilder: (BuildContext context, int index){
-                          return Row(
-                              children: [
-                                Image.file(
-                                  File(_images[index].path),
-                                  height: 50,
-                                ),
-                                IconButton(
-                                  onPressed: (){
-                                    setState(() {
-                                      _images.removeAt(index);
-                                      if(_images.length == 0){
-                                        Navigator.of(context).pop();
-                                      }
-                                    });
-                                  },
-                                  icon: Icon(Icons.delete_forever),)
-                              ]
+                          return Dismissible(
+                              key: Key(index.toString()),
+                              onDismissed: (direction) {
+                                setState(() {
+                                  print(index);
+                                  _images.removeWhere((element) =>
+                                    element.path == _images[index].path);
+                                  if(_images.length == 0){
+                                    Navigator.of(context).pop();
+                                  }
+                                });
+                              },
+                              child: Row(
+                                  children: [
+                                    Image.file(
+                                      File(_images[index].path),
+                                      height: 150,
+                                    ),
+                                    Text('Смахните, что удалить')
+                                  ]
+                              )
                           );
                         }
                     )
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(onPressed: (){
-                  Navigator.of(context).pop();
-                }, child: Text('Отмена'))
+                )
               ]
           ),
         );
