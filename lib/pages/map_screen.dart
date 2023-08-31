@@ -6,6 +6,8 @@ import 'package:shop_audit/component/app_location.dart';
 import 'package:shop_audit/component/dynamic_alert_msg.dart';
 import 'package:shop_audit/component/location.dart';
 import 'package:shop_audit/component/location_global.dart';
+import 'package:shop_audit/global/socket_handler.dart';
+import 'package:shop_audit/main.dart';
 import 'package:yandex_mapkit/yandex_mapkit.dart';
 import 'package:shop_audit/global/shop_points_for_job.dart';
 
@@ -19,11 +21,12 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen>
 {
   final mapControllerCompleter = Completer<YandexMapController>();
-  List<MapObject> _mapObjects = [];
+  Map<int,PlacemarkMapObject> _mapObjects = {};
   List<PointFromDb> _sourcePoints  = [];
   List<int> _activeShops = [];
-  int _aimShopPoint = 0;
+  Map<int,int> _shopIdAim = {}; //shopId userId
   late Timer _timerSelfLocation;
+  int _lastAimId = 0;
   int selfId = 0;
   AppLatLong _myLocation = BishkekLocation();
 
@@ -33,7 +36,10 @@ class _MapScreenState extends State<MapScreen>
     _mapObjects = returnListMapObjects();
     _initPermission().ignore();
     PointFromDbHandler().pointsFromDb.addListener(_changeObjects);
-    _timerSelfLocation = Timer.periodic(const Duration(seconds: 10),(timer){
+    PointFromDbHandler().userActivePoints.addListener(_changeUsersAim);
+    _shopIdAim = PointFromDbHandler().userActivePoints.value;
+    _timerSelfLocation = Timer.periodic(const Duration(seconds: 5),(timer){
+      SocketHandler().getAims(false);
       _fetchCurrentLocation(false);
     });
     super.initState();
@@ -44,63 +50,83 @@ class _MapScreenState extends State<MapScreen>
   {
     _timerSelfLocation.cancel();
     PointFromDbHandler().pointsFromDb.removeListener(_changeObjects);
+    PointFromDbHandler().userActivePoints.removeListener(_changeUsersAim);
     super.dispose();
+  }
+
+  void _changeUsersAim()
+  {
+    setState(() {
+      _shopIdAim = PointFromDbHandler().userActivePoints.value;
+    });
   }
 
   void _refreshActiveShops()
   {
     var currLoc = LocationHandler().currentLocation;
     for(int i=0;i<_sourcePoints.length;i++){
-      // if(((_sourcePoints[i].x - currLoc.latitude) * metersInOneAngle).abs() > 150){
-      //   continue;
-      // }
-      // if(((_sourcePoints[i].y - currLoc.longitude) * metersInOneAngle).abs() > 150){
-      //   continue;
-      // }
-      // if( pow(_sourcePoints[i].x - currLoc.latitude,2) + pow(_sourcePoints[i].y - currLoc.longitude,2) *  metersInOneAngle > pow(100,2)){
-      //   continue;
-      // }
+      if(((_sourcePoints[i].x - currLoc.latitude) * metersInOneAngle).abs() > 150){
+        continue;
+      }
+      if(((_sourcePoints[i].y - currLoc.longitude) * metersInOneAngle).abs() > 150){
+        continue;
+      }
+      if( pow(_sourcePoints[i].x - currLoc.latitude,2) + pow(_sourcePoints[i].y - currLoc.longitude,2) *  metersInOneAngle > pow(100,2)){
+        continue;
+      }
       _activeShops.add(_sourcePoints[i].id);
     }
   }
 
 
-  List<MapObject>  returnListMapObjects()
+  Map<int,PlacemarkMapObject>  returnListMapObjects()
   {
-    List<MapObject> newList = [];
+    Map<int,PlacemarkMapObject> newList = {};
     _sourcePoints = PointFromDbHandler().getFilteredPoints();
     for(var key in _sourcePoints)
     {
-      newList.add(createPlaceMark(key));
+      newList.putIfAbsent( key.id, () => createPlaceMark(key));
     }
-    newList.add(selfPoint());
+    newList.putIfAbsent(0,() =>  selfPoint());
     return newList;
   }
 
-  Future<void> _changeObjects() async
+
+
+  void _changeObjects()
   {
-    List<MapObject> newList = returnListMapObjects();
+    Map<int,PlacemarkMapObject> newList = returnListMapObjects();
     setState(() {
       _mapObjects = newList;
     });
   }
 
+  BitmapDescriptor getShopIcon(int shopId)
+  {
+    if(_shopIdAim.containsValue(shopId)){
+      if(_shopIdAim[mainShared?.getInt('userId')] == shopId){
+        _lastAimId = shopId;
+        return BitmapDescriptor.fromAssetImage('assets/red_point.png');
+      }
+      return BitmapDescriptor.fromAssetImage('assets/yellow_point.png');
+    }
+    return BitmapDescriptor.fromAssetImage('assets/black_point.png');
+  }
+
   PlacemarkMapObject createPlaceMark(PointFromDb point)
   {
-    print('createPlaceMark()');
     final mapObject = PlacemarkMapObject(
         mapId: MapObjectId('${point.id}'),
         point: Point(latitude: point.x, longitude: point.y),
         onTap: (PlacemarkMapObject mapObject, Point point) async{
           await _shopInfo(context, mapObject);
-          print('onTap');
         },
         opacity: 1,
         direction: 0,
         consumeTapEvents: true,
         isDraggable: false,
         icon: PlacemarkIcon.single(PlacemarkIconStyle(
-            image: point.id == _aimShopPoint ? BitmapDescriptor.fromAssetImage('assets/red_point.png')  : BitmapDescriptor.fromAssetImage('assets/black_point.png'),
+            image: getShopIcon(point.id),
             rotationType: RotationType.noRotation,
             scale: 2
         )),
@@ -118,7 +144,6 @@ class _MapScreenState extends State<MapScreen>
 
   PlacemarkMapObject selfPoint()
   {
-    print('createPlaceMark()');
     final mapObject = PlacemarkMapObject(
       mapId: MapObjectId(selfId.toString()),
       point: Point(latitude: LocationHandler().currentLocation.latitude, longitude: LocationHandler().currentLocation.longitude ),
@@ -170,7 +195,7 @@ class _MapScreenState extends State<MapScreen>
             children:[
               YandexMap(
                 tiltGesturesEnabled: false,
-                mapObjects: _mapObjects,
+                mapObjects: _mapObjects.values.toList(),
                 onMapCreated: (controller) {
                   mapControllerCompleter.complete(controller);
                 },
@@ -238,7 +263,6 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _shopInfo(BuildContext context,PlacemarkMapObject mapObject) async
   {
     int shopId = int.parse(mapObject.mapId.value);
-    print(shopId);
     return showDialog<void>(
       context: context,
       builder: (BuildContext context) {
@@ -250,8 +274,8 @@ class _MapScreenState extends State<MapScreen>
               crossAxisAlignment: CrossAxisAlignment.center,
               children:[
                 Text('Описание: ${PointFromDbHandler().pointsFromDb.value[shopId]!.description}'),
-                Text('Начало работы: ${PointFromDbHandler().pointsFromDb.value[shopId]!.startWorkingTime.hour.toString()}: ${PointFromDbHandler().pointsFromDb.value[shopId]!.startWorkingTime.minute.toString()}'),
-                Text('Конец работы:  ${PointFromDbHandler().pointsFromDb.value[shopId]!.endWorkingTime.hour.toString()}: ${PointFromDbHandler().pointsFromDb.value[shopId]!.endWorkingTime.minute.toString()}'),
+                Text('Начало работы: ${PointFromDbHandler().pointsFromDb.value[shopId]!.startWorkingTime}'),
+                Text('Конец работы:  ${PointFromDbHandler().pointsFromDb.value[shopId]!.endWorkingTime}'),
                 Text('Дата создания: ${presentDateTime(PointFromDbHandler().pointsFromDb.value[shopId]!.dateTimeCreated)}'),
               ]
           ),
@@ -263,9 +287,21 @@ class _MapScreenState extends State<MapScreen>
               child: const Text('Отслеживать'),
               onPressed: () {
                 Navigator.of(context).pop();
+                if(PointFromDbHandler().userActivePoints.value.containsValue(shopId)){
+                  return;
+                }
                 setState(() {
-                  _aimShopPoint = shopId;
-                  _mapObjects = returnListMapObjects();
+                  _mapObjects[shopId] = _mapObjects[shopId]!.copyWith(icon: PlacemarkIcon.single(PlacemarkIconStyle(
+                      image: BitmapDescriptor.fromAssetImage('assets/red_point.png'),
+                      rotationType: RotationType.noRotation,
+                      scale: 2)));
+                  SocketHandler().updateCurrentAim(mapObject.mapId.value);
+                  _mapObjects[_lastAimId] = _mapObjects[_lastAimId]!.copyWith(icon: PlacemarkIcon.single(PlacemarkIconStyle(
+                      image: BitmapDescriptor.fromAssetImage('assets/black_point.png'),
+                      rotationType: RotationType.noRotation,
+                      scale: 2)));
+                  _lastAimId = shopId;
+                  SocketHandler().getAims(true);
                 });
               },
             ),
@@ -282,11 +318,6 @@ class _MapScreenState extends State<MapScreen>
         );
       },
     );
-  }
-
-  String presentDateTime(DateTime dateTime)
-  {
-    return '${dateTime.year}.${dateTime.month}.${dateTime.day} ${dateTime.hour}:${dateTime.minute}';
   }
 
   Future<void> _variantsShops(BuildContext context) async
@@ -306,7 +337,7 @@ class _MapScreenState extends State<MapScreen>
                         itemBuilder: (BuildContext context, int index){
                           return ElevatedButton(onPressed: (){
                             PointFromDbHandler().activeShop = _activeShops[index];
-                            Navigator.of(context).pushNamedAndRemoveUntil('/report',(route) => false);
+                            Navigator.of(context).pushNamed('/report');
                           }, child: Text( PointFromDbHandler().pointsFromDb.value[_activeShops[index]]!.name));
                         }
                     )

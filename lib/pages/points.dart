@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shop_audit/global/shop_points_for_job.dart';
+import 'package:shop_audit/global/socket_handler.dart';
+import 'package:shop_audit/main.dart';
 
 class CustomCheck extends Checkbox
 {
@@ -16,21 +20,38 @@ class PointsPage extends StatefulWidget
 class _PointsPageState extends State<PointsPage> {
 
   var listAllPoints = [];
+  Map<int,int> _shopIdAim = {}; //shopId userId
+  late Timer _timerSelfLocation;
 
   @override
   void initState() {
     listAllPoints = PointFromDbHandler().pointsFromDb.value.values.toList();
-    PointFromDbHandler().pointsFromDb.addListener(updateListAllPoint);
+    PointFromDbHandler().pointsFromDb.addListener(_updateListAllPoint);
+    _shopIdAim = PointFromDbHandler().userActivePoints.value;
+    PointFromDbHandler().userActivePoints.addListener(_changeUsersAim);
+    _timerSelfLocation = Timer.periodic(const Duration(seconds: 10),(timer){
+      SocketHandler().getAims(false);
+    });
     super.initState();
   }
 
+  void _changeUsersAim()
+  {
+    setState(() {
+      _shopIdAim = PointFromDbHandler().userActivePoints.value;
+    });
+  }
+
+
   @override
   void dispose() {
-    PointFromDbHandler().pointsFromDb.removeListener(updateListAllPoint);
+    PointFromDbHandler().pointsFromDb.removeListener(_updateListAllPoint);
+    PointFromDbHandler().userActivePoints.removeListener(_changeUsersAim);
+    _timerSelfLocation.cancel();
     super.dispose();
   }
 
-  void updateListAllPoint()
+  void _updateListAllPoint()
   {
     setState(() {
       listAllPoints = PointFromDbHandler().pointsFromDb.value.values.toList();
@@ -78,7 +99,6 @@ class _PointsPageState extends State<PointsPage> {
                   ListView.builder(
                       itemCount: listAllPoints.length,
                       itemBuilder: (BuildContext context, int index) {
-                        print('refreshList');
                         return Row(children:
                         [
                           Checkbox(
@@ -92,7 +112,10 @@ class _PointsPageState extends State<PointsPage> {
                               PointFromDbHandler().pointsFromDb.notifyListeners();
                             },
                           ),
-                          Text(listAllPoints[index].name)
+                          Text(listAllPoints[index].name,
+                              style: TextStyle(
+                                color: getColor(listAllPoints[index].id)
+                              ))
                         ]);
                       }
                   )
@@ -100,5 +123,17 @@ class _PointsPageState extends State<PointsPage> {
             ]
         )
     );
+  }
+
+  Color getColor(int id)
+  {
+    if(_shopIdAim.containsValue(id)){
+      if(_shopIdAim.containsKey(mainShared?.getInt('userId')) && _shopIdAim[mainShared?.getInt('userId')] == id){
+        return Colors.red;
+      }else{
+        return Colors.yellow;
+      }
+    }
+    return Colors.black;
   }
 }

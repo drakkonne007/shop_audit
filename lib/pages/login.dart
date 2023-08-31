@@ -4,11 +4,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shop_audit/global/database.dart';
+import 'package:shop_audit/global/socket_handler.dart';
+import 'package:shop_audit/main.dart';
 
 class LoginPage extends StatefulWidget {
-
-  late final SharedPreferences prefs;
-
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -21,11 +20,21 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController passwordController = TextEditingController();
   bool isLoading = false;
 
-  Future<void> checkAccess()async{
-    bool answer = await DatabaseClient().checkAccess(loginController.text, passwordController.text);
-    if(answer == true){
-      widget.prefs = await SharedPreferences.getInstance();
-      widget.prefs.setBool('isLogged', true);
+  @override
+  void initState() {
+    SocketHandler().isLoginFunc = catchAccess;
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    SocketHandler().isLoginFunc = null;
+    super.dispose();
+  }
+
+  void catchAccess(bool result) async
+  {
+    if(result == true){
       Navigator.of(context).pushNamedAndRemoveUntil('/mapScreen', (route) => false);
     }else{
       setState(() {
@@ -85,10 +94,13 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 20,),
               isLoading ? const CircularProgressIndicator() : ElevatedButton(onPressed: (){
+                if(loginController.text.isEmpty || passwordController.text.isEmpty){
+                  return;
+                }
                 setState(() {
                   isLoading = true;
                 });
-                checkAccess();
+                SocketHandler().checkAccess(loginController.text, passwordController.text);
               },
                   child: Text('Войти')
               ),

@@ -4,10 +4,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shop_audit/global/database.dart';
+import 'package:shop_audit/global/socket_handler.dart';
+import 'package:shop_audit/main.dart';
 
 class LoadSplash extends StatefulWidget {
-
-  late final SharedPreferences prefs;
 
   @override
   State<LoadSplash> createState() => _LoadSplashState();
@@ -18,15 +18,18 @@ class _LoadSplashState extends State<LoadSplash> {
   bool isConnect = true;
   bool isProcessing = true;
 
-
   Future<void> loadDB() async
   {
-    widget.prefs = await SharedPreferences.getInstance();
-    bool isLogged = widget.prefs.getBool('isLogged') ?? false;
-    bool answer = await DatabaseClient().openDB();
-    if(answer == true) {
-      DatabaseClient().getShopPoints();
-      DatabaseClient().loadReports();
+    int? id = mainShared?.getInt('userId');
+    bool isLogged = false;
+    if(id != null && id != 0){
+      isLogged = true;
+    }
+    await SocketHandler().init();
+    if(SocketHandler().isLoad) {
+      // DatabaseClient().getShopPoints();//FIXME это для субдо версии
+      SocketHandler().loadShops(false);
+      SocketHandler().getAims(false);
       if(isLogged){
         Navigator.of(context).pushNamedAndRemoveUntil('/mapScreen', (route) => false);
       }else{

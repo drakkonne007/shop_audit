@@ -1,13 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shop_audit/pages/load_splash.dart';
 import 'package:shop_audit/pages/login.dart';
 import 'package:shop_audit/pages/points.dart';
 import 'package:shop_audit/pages/report.dart';
 import 'package:shop_audit/pages/map_screen.dart';
 
+SharedPreferences? mainShared;
+
+String presentDateTime(DateTime dateTime, {bool seconds = false})
+{
+  String answer = '${dateTime.year}.${dateTime.month}.${dateTime.day} ${dateTime.hour}:${dateTime.minute}';
+  if(seconds){
+    answer += ':${dateTime.second}';
+  }
+  return answer;
+}
 
 Future<void> main() async{
   WidgetsFlutterBinding.ensureInitialized();
+  mainShared = await SharedPreferences.getInstance();
   runApp(MyApp());
 }
 

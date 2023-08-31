@@ -21,8 +21,8 @@ class PointFromDb
   double y = -1;
   String name = '';
   String description = '';
-  DateTime startWorkingTime = DateTime.now();
-  DateTime endWorkingTime = DateTime.now();
+  String startWorkingTime = '';
+  String endWorkingTime = '';
   DateTime dateTimeCreated = DateTime.now();
   bool isWasReport = false;
   bool isNeedDrawBySort = true;
@@ -37,9 +37,9 @@ class PointFromDbHandler
   }
   PointFromDbHandler._internal();
   ValueNotifier<Map<int,PointFromDb>> pointsFromDb = ValueNotifier({});
+  ValueNotifier<Map<int,int>> userActivePoints = ValueNotifier({}); //userID shopId
   Set<int> customNeedsPoint = {};
   SortType sortType = SortType.None;
-  Map<int,PointFromDb> cachedPoints = {};
   int activeShop = 0; //айди магазина для отчёта
 
   bool isNeedShop(int id){
