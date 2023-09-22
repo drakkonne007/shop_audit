@@ -16,6 +16,7 @@ enum SortType
 
 class PointFromDb
 {
+  String address = '';
   int id = -1;
   double x = -1;
   double y = -1;
@@ -65,7 +66,7 @@ class PointFromDbHandler
       case SortType.None: {
         for(int i=0;i<allList.length;i++){
           allList[i].isNeedDrawBySort = true;
-          if(allList[i].isNeedDrawByCustom) {
+          if(allList[i].isNeedDrawByCustom && allList[i].x > 0 && allList[i].y > 0) {
             filteredList.add(allList[i]);
           }
         }
@@ -79,7 +80,7 @@ class PointFromDbHandler
             continue;
           }
           allList[i].isNeedDrawBySort = true;
-          if(allList[i].isNeedDrawByCustom) {
+          if(allList[i].isNeedDrawByCustom && allList[i].x != 0 && allList[i].y != 0) {
             filteredList.add(allList[i]);
           }
         }
@@ -91,7 +92,7 @@ class PointFromDbHandler
             continue;
           }
           allList[i].isNeedDrawBySort = true;
-          if(allList[i].isNeedDrawByCustom) {
+          if(allList[i].isNeedDrawByCustom && allList[i].x != 0 && allList[i].y != 0) {
             filteredList.add(allList[i]);
           }
         }
@@ -103,7 +104,7 @@ class PointFromDbHandler
             continue;
           }
           allList[i].isNeedDrawBySort = true;
-          if(allList[i].isNeedDrawByCustom) {
+          if(allList[i].isNeedDrawByCustom && allList[i].x != 0 && allList[i].y != 0) {
             filteredList.add(allList[i]);
           }
         }

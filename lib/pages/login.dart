@@ -19,9 +19,11 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController loginController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   bool isLoading = false;
+  bool _obscured = true;
 
   @override
   void initState() {
+    _isCorrect = true;
     SocketHandler().isLoginFunc = catchAccess;
     super.initState();
   }
@@ -34,7 +36,12 @@ class _LoginPageState extends State<LoginPage> {
 
   void catchAccess(bool result) async
   {
+    _isCorrect = true;
     if(result == true){
+      SocketHandler().loadShops(true);
+      SocketHandler().getAims(false);
+      mainShared?.setString('pwd', passwordController.text);
+      mainShared?.setString('login', loginController.text);
       Navigator.of(context).pushNamedAndRemoveUntil('/mapScreen', (route) => false);
     }else{
       setState(() {
@@ -55,7 +62,6 @@ class _LoginPageState extends State<LoginPage> {
             children: [
               Text(_isCorrect ? 'Добро пожаловать' : 'Неверный логин или пароль'),
               SizedBox(height: 20,),
-              Text('Логин'),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -63,6 +69,18 @@ class _LoginPageState extends State<LoginPage> {
                   SizedBox(
                     width: MediaQuery.of(context).size.width * 0.6,
                     child: TextFormField(
+                      decoration: InputDecoration(
+                        floatingLabelBehavior: FloatingLabelBehavior.never, //Hides label on focus or if filled
+                        labelText: "Логин",
+                        filled: true, // Needed for adding a fill color
+                        fillColor: Colors.orange[200],
+                        isDense: true,  // Reduces height a bit
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide.none,              // No border
+                          borderRadius: BorderRadius.circular(12),  // Apply corner radius
+                        ),
+                        prefixIcon: const Icon(Icons.supervised_user_circle, size: 24),
+                      ),
                       controller: loginController,
                     ),
                   ),
@@ -74,7 +92,6 @@ class _LoginPageState extends State<LoginPage> {
                 ],
               ),
               const SizedBox(height: 20,),
-              Text('Пароль'),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -82,6 +99,36 @@ class _LoginPageState extends State<LoginPage> {
                   SizedBox(
                     width: MediaQuery.of(context).size.width * 0.6,
                     child: TextFormField(
+                      keyboardType: TextInputType.visiblePassword,
+                      obscureText: _obscured,
+                      decoration: InputDecoration(
+                        floatingLabelBehavior: FloatingLabelBehavior.never, //Hides label on focus or if filled
+                        labelText: "Пароль",
+                        filled: true, // Needed for adding a fill color
+                        fillColor: Colors.orange[200],
+                        isDense: true,  // Reduces height a bit
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide.none,              // No border
+                          borderRadius: BorderRadius.circular(12),  // Apply corner radius
+                        ),
+                        prefixIcon: Icon(Icons.lock_rounded, size: 24),
+                        suffixIcon: Padding(
+                          padding: const EdgeInsets.fromLTRB(0, 0, 4, 0),
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _obscured = !_obscured;
+                              });
+                            },
+                            child: Icon(
+                              _obscured
+                                  ? Icons.visibility_rounded
+                                  : Icons.visibility_off_rounded,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                      ),
                       controller: passwordController,
                     ),
                   ),

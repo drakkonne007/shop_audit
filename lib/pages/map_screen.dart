@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
+import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shop_audit/component/app_location.dart';
@@ -23,10 +25,10 @@ class _MapScreenState extends State<MapScreen>
   final mapControllerCompleter = Completer<YandexMapController>();
   Map<int,PlacemarkMapObject> _mapObjects = {};
   List<PointFromDb> _sourcePoints  = [];
-  List<int> _activeShops = [];
+  final List<int> _activeShops = [];
   Map<int,int> _shopIdAim = {}; //shopId userId
   late Timer _timerSelfLocation;
-  int _lastAimId = 0;
+  int _lastAimId = -1;
   int selfId = 0;
   AppLatLong _myLocation = BishkekLocation();
 
@@ -38,11 +40,17 @@ class _MapScreenState extends State<MapScreen>
     PointFromDbHandler().pointsFromDb.addListener(_changeObjects);
     PointFromDbHandler().userActivePoints.addListener(_changeUsersAim);
     _shopIdAim = PointFromDbHandler().userActivePoints.value;
-    _timerSelfLocation = Timer.periodic(const Duration(seconds: 5),(timer){
+    _timerSelfLocation = Timer.periodic(const Duration(seconds: 2),(timer){
       SocketHandler().getAims(false);
       _fetchCurrentLocation(false);
     });
     super.initState();
+  }
+
+  void reloadAll()
+  {
+    SocketHandler().loadShops(true);
+    _refreshActiveShops();
   }
 
   @override
@@ -58,22 +66,26 @@ class _MapScreenState extends State<MapScreen>
   {
     setState(() {
       _shopIdAim = PointFromDbHandler().userActivePoints.value;
+      SocketHandler().loadShops(true);
     });
   }
 
   void _refreshActiveShops()
   {
+    print('_refreshActiveShops');
+    _activeShops.clear();
     var currLoc = LocationHandler().currentLocation;
     for(int i=0;i<_sourcePoints.length;i++){
-      if(((_sourcePoints[i].x - currLoc.latitude) * metersInOneAngle).abs() > 150){
-        continue;
-      }
-      if(((_sourcePoints[i].y - currLoc.longitude) * metersInOneAngle).abs() > 150){
-        continue;
-      }
-      if( pow(_sourcePoints[i].x - currLoc.latitude,2) + pow(_sourcePoints[i].y - currLoc.longitude,2) *  metersInOneAngle > pow(100,2)){
-        continue;
-      }
+      // if(((_sourcePoints[i].x - currLoc.latitude) * metersInOneAngle).abs() > 30){
+      //   continue;
+      // }
+      // if(((_sourcePoints[i].y - currLoc.longitude) * metersInOneAngle).abs() > 30){
+      //   continue;
+      // }
+      // if((pow(_sourcePoints[i].x - currLoc.latitude,2) + pow(_sourcePoints[i].y - currLoc.longitude,2)) *  metersInOneAngle > pow(30,2)){
+      //   continue;
+      // }
+      // print('addShop');
       _activeShops.add(_sourcePoints[i].id);
     }
   }
@@ -91,8 +103,6 @@ class _MapScreenState extends State<MapScreen>
     return newList;
   }
 
-
-
   void _changeObjects()
   {
     Map<int,PlacemarkMapObject> newList = returnListMapObjects();
@@ -104,7 +114,7 @@ class _MapScreenState extends State<MapScreen>
   BitmapDescriptor getShopIcon(int shopId)
   {
     if(_shopIdAim.containsValue(shopId)){
-      if(_shopIdAim[mainShared?.getInt('userId')] == shopId){
+      if(_shopIdAim[globalUserId!] == shopId){
         _lastAimId = shopId;
         return BitmapDescriptor.fromAssetImage('assets/red_point.png');
       }
@@ -166,10 +176,89 @@ class _MapScreenState extends State<MapScreen>
 
   @override
   Widget build(BuildContext context) {
+    var allList = PointFromDbHandler().pointsFromDb.value.values.toList();
     return Scaffold(
+        drawerEnableOpenDragGesture: false,
+        drawer: Drawer(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children:[
+                  const SizedBox(height: 30,),
+                  ElevatedButton(onPressed: (){
+                    PointFromDbHandler().showAllPointByUser();
+                    PointFromDbHandler().pointsFromDb.notifyListeners();
+                  }, child: Text('Сбросить отмеченные ыручную')
+                  ),
+                  ElevatedButton(onPressed: (){
+                    PointFromDbHandler().sortType = SortType.None;
+                    PointFromDbHandler().showAllPointByUser();
+                    PointFromDbHandler().pointsFromDb.notifyListeners();
+                  }, child: Text('Все')
+                  ),
+                  ElevatedButton(onPressed: (){
+                    PointFromDbHandler().sortType = SortType.Distance;
+                    PointFromDbHandler().showAllPointByUser();
+                    PointFromDbHandler().pointsFromDb.notifyListeners();
+                  }, child: Text('Ближе 5 километров')
+                  ),
+                  ElevatedButton(onPressed: (){
+                    PointFromDbHandler().sortType = SortType.DateTimeCreated;
+                    PointFromDbHandler().showAllPointByUser();
+                    PointFromDbHandler().pointsFromDb.notifyListeners();
+                  }, child: Text('За последний месяц')
+                  ),
+                  Expanded(
+                      child:
+                      ListView.builder(
+                          itemCount: allList.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            return Row(children:
+                            [
+                              Checkbox(
+                                value: PointFromDbHandler().isNeedShop(allList[index].id),
+                                onChanged: (val){
+                                  if(val == true){
+                                    PointFromDbHandler().pointsFromDb.value[allList[index].id]!.isNeedDrawByCustom = true;
+                                  }else{
+                                    PointFromDbHandler().pointsFromDb.value[allList[index].id]!.isNeedDrawByCustom = false;
+                                  }
+                                  PointFromDbHandler().pointsFromDb.notifyListeners();
+                                },
+                              ),
+                              Expanded(
+                                  child: TextButton(
+                                      onPressed: () async{
+                                        if (Platform.isAndroid) {
+                                          AndroidIntent intent = AndroidIntent(
+                                            action: 'action_view',
+                                            data: 'geo:${allList[index].x},${allList[index].y}',
+                                            package: 'com.google.android.apps.maps',
+                                          );
+                                          await intent.launch();
+                                        }
+                                      },
+                                      child: Text('${allList[index].address}, ${allList[index].name}',
+                                          style: TextStyle(
+                                              color: getColor(allList[index].id)
+                                          ))
+                                  )),
+                              IconButton(onPressed: (){
+                                _moveToCurrentLocation(AppLatLong(latitude: allList[index].x, longitude: allList[index].y));
+                              }, icon: const Icon(Icons.gps_fixed))
+                            ]);
+                          }
+                      )
+                  ),
+                  IconButton(onPressed: (){logOut(context);}, icon: const Icon(Icons.logout_outlined))
+                ]
+            )
+        ),
         appBar: AppBar(
           actions: [
-            IconButton(onPressed: (){Navigator.of(context).pushNamed('/points');}, icon: const Icon(Icons.settings)),
+            ElevatedButton(onPressed: (){
+              reloadAll();
+            },
+                child: const Icon(Icons.refresh)),
             ElevatedButton(onPressed: () async{
               switch(_activeShops.length){
                 case 0: {
@@ -205,6 +294,12 @@ class _MapScreenState extends State<MapScreen>
                 child: FloatingActionButton(
                     child: const Icon(Icons.gps_fixed),
                     onPressed: () async {
+                      // bool isLoad = await DatabaseClient().openDB();
+                      // print(isLoad);
+                      // if(isLoad){
+                      //   DatabaseClient().getShopPoints();
+                      // }
+                      // return;
                       _fetchCurrentLocation(true);
                     }
                 ),
@@ -271,11 +366,12 @@ class _MapScreenState extends State<MapScreen>
           content:  Column(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children:[
-                Text('Описание: ${PointFromDbHandler().pointsFromDb.value[shopId]!.description}'),
-                Text('Начало работы: ${PointFromDbHandler().pointsFromDb.value[shopId]!.startWorkingTime}'),
-                Text('Конец работы:  ${PointFromDbHandler().pointsFromDb.value[shopId]!.endWorkingTime}'),
+                Text('Адрес: ${PointFromDbHandler().pointsFromDb.value[shopId]!.address}'),
+                // Text('Описание: ${PointFromDbHandler().pointsFromDb.value[shopId]!.description}'),
+                // Text('Начало работы: ${PointFromDbHandler().pointsFromDb.value[shopId]!.startWorkingTime}'),
+                // Text('Конец работы:  ${PointFromDbHandler().pointsFromDb.value[shopId]!.endWorkingTime}'),
                 Text('Дата создания: ${presentDateTime(PointFromDbHandler().pointsFromDb.value[shopId]!.dateTimeCreated)}'),
               ]
           ),
@@ -296,10 +392,14 @@ class _MapScreenState extends State<MapScreen>
                       rotationType: RotationType.noRotation,
                       scale: 2)));
                   SocketHandler().updateCurrentAim(mapObject.mapId.value);
-                  _mapObjects[_lastAimId] = _mapObjects[_lastAimId]!.copyWith(icon: PlacemarkIcon.single(PlacemarkIconStyle(
-                      image: BitmapDescriptor.fromAssetImage('assets/black_point.png'),
-                      rotationType: RotationType.noRotation,
-                      scale: 2)));
+                  if(_lastAimId != -1){
+                    _mapObjects[_lastAimId] = _mapObjects[_lastAimId]!.copyWith(
+                        icon: PlacemarkIcon.single(PlacemarkIconStyle(
+                            image: BitmapDescriptor.fromAssetImage(
+                                'assets/black_point.png'),
+                            rotationType: RotationType.noRotation,
+                            scale: 2)));
+                  }
                   _lastAimId = shopId;
                   SocketHandler().getAims(true);
                 });
@@ -322,6 +422,7 @@ class _MapScreenState extends State<MapScreen>
 
   Future<void> _variantsShops(BuildContext context) async
   {
+    var temp = List.unmodifiable(_activeShops);
     return showDialog<void>(
       //PointFromDbHandler().activeShop = _activeShops[0];
       context: context,
@@ -333,12 +434,12 @@ class _MapScreenState extends State<MapScreen>
                 Expanded(
                     child:ListView.separated(
                         separatorBuilder: (BuildContext context, int index) => const Divider(),
-                        itemCount: _activeShops.length,
+                        itemCount: temp.length,
                         itemBuilder: (BuildContext context, int index){
                           return ElevatedButton(onPressed: (){
-                            PointFromDbHandler().activeShop = _activeShops[index];
+                            PointFromDbHandler().activeShop = temp[index];
                             Navigator.of(context).pushNamed('/report');
-                          }, child: Text( PointFromDbHandler().pointsFromDb.value[_activeShops[index]]!.name));
+                          }, child: Text( PointFromDbHandler().pointsFromDb.value[temp[index]]!.name));
                         }
                     )
                 ),
@@ -352,4 +453,49 @@ class _MapScreenState extends State<MapScreen>
       },
     );
   }
+  Color getColor(int id)
+  {
+    if(_shopIdAim.containsValue(id)){
+      if(_shopIdAim[globalUserId!] == id){
+        return Colors.red;
+      }else{
+        return Colors.yellow;
+      }
+    }
+    return Colors.black;
+  }
+}
+
+Future<void> logOut(BuildContext context) async
+{
+  return showDialog<void>(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title:  const Text('Выйти из аккаунта?'),
+        actions: <Widget>[
+          TextButton(
+            style: TextButton.styleFrom(
+              textStyle: Theme.of(context).textTheme.labelLarge,
+            ),
+            child: const Text('Ок'),
+            onPressed: () {
+              mainShared?.setString('login','');
+              mainShared?.setString('pwd','');
+              Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+            },
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              textStyle: Theme.of(context).textTheme.labelLarge,
+            ),
+            child: const Text('Нет'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      );
+    },
+  );
 }

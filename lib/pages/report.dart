@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -76,20 +77,12 @@ class _ReportPageState extends State<ReportPage> {
                 children: [
                   IconButton(
                       onPressed: ()async{
-                        final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+                        final XFile? photo = await _picker.pickImage(source: ImageSource.camera, maxHeight: 800, maxWidth: 800, imageQuality: 100);
                         if(photo != null){
                           _images.add(photo);
                         }
                       },
                       icon: const Icon(Icons.photo_camera)),
-                  IconButton(
-                      onPressed: ()async{
-                        final List<XFile> images = await _picker.pickMultiImage();
-                        for(XFile image in images){
-                          _images.add(image);
-                        }
-                      }
-                      , icon: const Icon(Icons.photo)),
                   ElevatedButton(
                       onPressed: ()async{
                         if(_images.isEmpty){
@@ -123,9 +116,9 @@ class _ReportPageState extends State<ReportPage> {
                         itemCount: _images.length,
                         itemBuilder: (BuildContext context, int index){
                           return Dismissible(
-                              key: Key(_images[index].path),
+                              key: Key(index.toString()),
                               onDismissed: (direction) {
-                                _images.removeWhere((element) => element.path == _backupImages[index].path);
+                                _images.removeWhere((element) => element == _backupImages[index]);
                                 if(_images.isEmpty){
                                   Navigator.of(context).pop();
                                 }
@@ -134,9 +127,9 @@ class _ReportPageState extends State<ReportPage> {
                                   children: [
                                     Image.file(
                                       File(_images[index].path),
-                                      height: 150,
+                                      height: 200,
                                     ),
-                                    Text('Смахните, что удалить')
+                                    const Text('Смахните, что удалить')
                                   ]
                               )
                           );

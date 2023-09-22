@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shop_audit/pages/load_splash.dart';
 import 'package:shop_audit/pages/login.dart';
-import 'package:shop_audit/pages/points.dart';
 import 'package:shop_audit/pages/report.dart';
 import 'package:shop_audit/pages/map_screen.dart';
 
 SharedPreferences? mainShared;
+int? globalUserId;
 
 String presentDateTime(DateTime dateTime, {bool seconds = false})
 {
@@ -60,7 +60,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/mapScreen': (context) => const MapScreen(),
         '/login': (context) => LoginPage(),
-        '/points': (context) => PointsPage(),
+        // '/points': (context) => PointsPage(),
         '/report': (context) => ReportPage(),
         '/loadSplash': (context) => LoadSplash(),
       },

@@ -2,8 +2,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shop_audit/global/database.dart';
 import 'package:shop_audit/global/socket_handler.dart';
 import 'package:shop_audit/main.dart';
 
@@ -15,23 +13,33 @@ class LoadSplash extends StatefulWidget {
 
 class _LoadSplashState extends State<LoadSplash> {
 
+
   bool isConnect = true;
   bool isProcessing = true;
 
-  Future<void> loadDB() async
+  void catchAccess(bool result) async
   {
-    int? id = mainShared?.getInt('userId');
-    bool isLogged = false;
-    if(id != null && id != 0){
-      isLogged = true;
-    }
-    await SocketHandler().init();
-    if(SocketHandler().isLoad) {
-      // DatabaseClient().getShopPoints();//FIXME это для субдо версии
+    SocketHandler().isLoginFunc = null;
+    if(result){
       SocketHandler().loadShops(false);
       SocketHandler().getAims(false);
-      if(isLogged){
-        Navigator.of(context).pushNamedAndRemoveUntil('/mapScreen', (route) => false);
+      Navigator.of(context).pushNamedAndRemoveUntil('/mapScreen', (route) => false);
+    }else{
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+    }
+  }
+
+  Future<void> loadDB() async
+  {
+    String? login = mainShared?.getString('login');
+    String? pwd = mainShared?.getString('pwd');
+    if(!SocketHandler().isLoad) {
+      await SocketHandler().init();
+    }
+    if(SocketHandler().isLoad) {
+      if(login != null && pwd != null){
+        SocketHandler().isLoginFunc = catchAccess;
+        SocketHandler().checkAccess(login, pwd);
       }else{
         Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
       }
