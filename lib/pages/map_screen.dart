@@ -72,20 +72,18 @@ class _MapScreenState extends State<MapScreen>
 
   void _refreshActiveShops()
   {
-    print('_refreshActiveShops');
     _activeShops.clear();
     var currLoc = LocationHandler().currentLocation;
     for(int i=0;i<_sourcePoints.length;i++){
-      // if(((_sourcePoints[i].x - currLoc.latitude) * metersInOneAngle).abs() > 30){
-      //   continue;
-      // }
-      // if(((_sourcePoints[i].y - currLoc.longitude) * metersInOneAngle).abs() > 30){
-      //   continue;
-      // }
-      // if((pow(_sourcePoints[i].x - currLoc.latitude,2) + pow(_sourcePoints[i].y - currLoc.longitude,2)) *  metersInOneAngle > pow(30,2)){
-      //   continue;
-      // }
-      // print('addShop');
+      if(((_sourcePoints[i].x - currLoc.latitude) * metersInOneAngle).abs() > 30){
+        continue;
+      }
+      if(((_sourcePoints[i].y - currLoc.longitude) * metersInOneAngle).abs() > 30){
+        continue;
+      }
+      if((pow(_sourcePoints[i].x - currLoc.latitude,2) + pow(_sourcePoints[i].y - currLoc.longitude,2)) *  metersInOneAngle > pow(30,2)){
+        continue;
+      }
       _activeShops.add(_sourcePoints[i].id);
     }
   }

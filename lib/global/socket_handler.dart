@@ -58,7 +58,6 @@ class SocketHandler
       }
       _socket.write(await compute(_imgsDecode, files[i]));
     }
-    print('end parse imgs');
     _socket.write('\x17');
   }
 
@@ -142,7 +141,6 @@ class SocketHandler
 
   void loadShops(bool reload)
   {
-    print('$globalUserId');
     _sendMessage(text: 'loadShops?id=$globalUserId', reload: reload);
   }
 
