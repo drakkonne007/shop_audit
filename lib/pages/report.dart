@@ -1,12 +1,14 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shop_audit/component/dynamic_alert_msg.dart';
 import 'package:shop_audit/global/shop_points_for_job.dart';
 import 'package:shop_audit/global/socket_handler.dart';
+import 'package:shop_audit/pages/camera_handler.dart';
 
 class ReportPage extends StatefulWidget
 {
@@ -17,14 +19,12 @@ class ReportPage extends StatefulWidget
 class _ReportPageState extends State<ReportPage> {
   final TextEditingController _textController = TextEditingController();
 
-  List<XFile> _images = [];
-  List<XFile> _backupImages = [];
+  List<String> _backupImages = [];
 
   final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
-    _images = [];
     super.initState();
   }
 
@@ -32,7 +32,6 @@ class _ReportPageState extends State<ReportPage> {
   void dispose()
   {
     _textController.dispose();
-    _images = [];
     super.dispose();
   }
 
@@ -44,10 +43,7 @@ class _ReportPageState extends State<ReportPage> {
           actions: [
             IconButton(
               onPressed: (){
-                List<String> paths = [];
-                for(XFile image in _images){
-                  paths.add(image.path);
-                }
+                List<String> paths = CameraHandler().imagePaths;
                 SocketHandler().sendReport(paths,_textController.text, PointFromDbHandler().activeShop);
                 Navigator.pop(context);
               },
@@ -63,7 +59,7 @@ class _ReportPageState extends State<ReportPage> {
               const Text('Текстовое описание'),
               Expanded(
                 child: TextField(
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                   ),
                   controller: _textController,
@@ -76,20 +72,21 @@ class _ReportPageState extends State<ReportPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   IconButton(
-                      onPressed: ()async{
-                        final XFile? photo = await _picker.pickImage(source: ImageSource.camera, maxHeight: 800, maxWidth: 800, imageQuality: 100);
-                        if(photo != null){
-                          _images.add(photo);
-                        }
+                      onPressed: () async{
+                        CameraHandler().loadCameras().then((value){Navigator.of(context).pushNamed('/photoPage');});
+                        // List<XFile> photo = await _picker.pickMultiImage(maxHeight: 800, maxWidth: 800, imageQuality: 100);
+                        // for(XFile photo in photo){
+                        //   _images.add(photo);
+                        // }
                       },
                       icon: const Icon(Icons.photo_camera)),
                   ElevatedButton(
                       onPressed: ()async{
-                        if(_images.isEmpty){
+                        if(CameraHandler().imagePaths.isEmpty){
                           customAlertMsg(context, 'Нет фотографий для отчёта');
                           return;
                         }
-                        _backupImages = List.unmodifiable(_images);
+                        _backupImages = List.unmodifiable(CameraHandler().imagePaths);
                         await _variantPhotos(context);
                       },
                       child: const Text('Редактировать фотографии')),
@@ -113,20 +110,20 @@ class _ReportPageState extends State<ReportPage> {
                 Expanded(
                     child:ListView.separated(
                         separatorBuilder: (BuildContext context, int index) => const Divider(),
-                        itemCount: _images.length,
+                        itemCount: CameraHandler().imagePaths.length,
                         itemBuilder: (BuildContext context, int index){
                           return Dismissible(
                               key: Key(index.toString()),
                               onDismissed: (direction) {
-                                _images.removeWhere((element) => element == _backupImages[index]);
-                                if(_images.isEmpty){
+                                CameraHandler().imagePaths.removeWhere((element) => element == _backupImages[index]);
+                                if(CameraHandler().imagePaths.isEmpty){
                                   Navigator.of(context).pop();
                                 }
                               },
                               child: Row(
                                   children: [
                                     Image.file(
-                                      File(_images[index].path),
+                                      File(CameraHandler().imagePaths[index]),
                                       height: 200,
                                     ),
                                     const Text('Смахните, что удалить')

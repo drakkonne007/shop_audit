@@ -10,6 +10,7 @@ import 'package:shop_audit/component/location.dart';
 import 'package:shop_audit/component/location_global.dart';
 import 'package:shop_audit/global/socket_handler.dart';
 import 'package:shop_audit/main.dart';
+import 'package:shop_audit/pages/camera_handler.dart';
 import 'package:yandex_mapkit/yandex_mapkit.dart';
 import 'package:shop_audit/global/shop_points_for_job.dart';
 
@@ -50,6 +51,7 @@ class _MapScreenState extends State<MapScreen>
   void reloadAll()
   {
     SocketHandler().loadShops(true);
+    _mapObjects = returnListMapObjects();
     _refreshActiveShops();
   }
 
@@ -92,6 +94,7 @@ class _MapScreenState extends State<MapScreen>
   Map<int,PlacemarkMapObject>  returnListMapObjects()
   {
     Map<int,PlacemarkMapObject> newList = {};
+    _sourcePoints.clear();
     _sourcePoints = PointFromDbHandler().getFilteredPoints();
     for(var key in _sourcePoints)
     {
@@ -174,6 +177,7 @@ class _MapScreenState extends State<MapScreen>
 
   @override
   Widget build(BuildContext context) {
+    print('build)');
     var allList = PointFromDbHandler().pointsFromDb.value.values.toList();
     return Scaffold(
         drawerEnableOpenDragGesture: false,
@@ -265,6 +269,7 @@ class _MapScreenState extends State<MapScreen>
                 break;
                 case 1: {
                   PointFromDbHandler().activeShop = _activeShops[0];
+                  CameraHandler().imagePaths = [];
                   Navigator.of(context).pushNamed('/report');
                 }
                 break;
@@ -436,6 +441,7 @@ class _MapScreenState extends State<MapScreen>
                         itemBuilder: (BuildContext context, int index){
                           return ElevatedButton(onPressed: (){
                             PointFromDbHandler().activeShop = temp[index];
+                            CameraHandler().imagePaths = [];
                             Navigator.of(context).pushNamed('/report');
                           }, child: Text( PointFromDbHandler().pointsFromDb.value[temp[index]]!.name));
                         }

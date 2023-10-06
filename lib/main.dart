@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shop_audit/pages/load_splash.dart';
 import 'package:shop_audit/pages/login.dart';
+import 'package:shop_audit/pages/photo_page.dart';
 import 'package:shop_audit/pages/report.dart';
 import 'package:shop_audit/pages/map_screen.dart';
 
@@ -60,6 +61,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/mapScreen': (context) => const MapScreen(),
         '/login': (context) => LoginPage(),
+        '/photoPage': (context) => PhotoPage(),
         // '/points': (context) => PointsPage(),
         '/report': (context) => ReportPage(),
         '/loadSplash': (context) => LoadSplash(),
