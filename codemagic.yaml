@@ -1,0 +1,3 @@
+workflows:
+  my-workflow:
+    instance_type: mac_pro
