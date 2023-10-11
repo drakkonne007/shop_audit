@@ -41,7 +41,6 @@ class PointFromDbHandler
   ValueNotifier<Map<int,int>> userActivePoints = ValueNotifier({}); //userID shopId
   Set<int> customNeedsPoint = {};
   SortType sortType = SortType.None;
-  int activeShop = 0; //айди магазина для отчёта
 
   bool isNeedShop(int id){
     if(!pointsFromDb.value.containsKey(id)){

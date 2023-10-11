@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:shop_audit/main.dart';
 import 'package:shop_audit/pages/camera_handler.dart';
 
 class PhotoPage extends StatefulWidget
@@ -15,7 +16,6 @@ class TakePictureScreenState extends State<PhotoPage> {
 
   @override
   void initState(){
-
     // To display the current output from the Camera,
     // create a CameraController.
     _controller = CameraController(
@@ -98,7 +98,7 @@ class TakePictureScreenState extends State<PhotoPage> {
 class DisplayPictureScreen extends StatelessWidget {
   final String imagePath;
 
-  const DisplayPictureScreen({super.key, required this.imagePath});
+  DisplayPictureScreen({super.key, required this.imagePath});
 
   @override
   Widget build(BuildContext context) {
@@ -119,6 +119,9 @@ class DisplayPictureScreen extends StatelessWidget {
                         iconSize: 50,
                         onPressed: () {
                           CameraHandler().imagePaths.add(imagePath);
+                          var temp = mainShared?.getStringList('photos');
+                          temp?.add(imagePath);
+                          mainShared?.setStringList('photos', temp ?? []);
                           Navigator.of(context).pop();
                         },
                         icon: const Icon(Icons.check),

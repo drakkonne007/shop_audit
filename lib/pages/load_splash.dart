@@ -2,8 +2,12 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:shop_audit/component/dynamic_alert_msg.dart';
+import 'package:shop_audit/global/global_variants.dart';
+import 'package:shop_audit/global/shop_points_for_job.dart';
 import 'package:shop_audit/global/socket_handler.dart';
 import 'package:shop_audit/main.dart';
+import 'package:shop_audit/pages/camera_handler.dart';
 
 class LoadSplash extends StatefulWidget {
 
@@ -17,16 +21,36 @@ class _LoadSplashState extends State<LoadSplash> {
   bool isConnect = true;
   bool isProcessing = true;
 
-  void catchAccess(bool result) async
+  void getAnswerAboutContinueReport(bool isNeed)
+  {
+    if(isNeed){
+        GlobalHandler.activeShop = mainShared!.getInt('reportShopId') ?? 0;
+        if(mainShared?.getStringList('photos') != null){
+          CameraHandler().imagePaths.addAll(mainShared?.getStringList('photos') ?? []);
+        }
+        Navigator.of(context).pushNamedAndRemoveUntil('/report', (route) => false);
+    }else{
+      Navigator.of(context).pushNamedAndRemoveUntil(
+          '/mapScreen', (route) => false);
+    }
+  }
+
+  void catchAccess(bool result)
   {
     SocketHandler().isLoginFunc = null;
     if(result){
       SocketHandler().loadShops(false);
       SocketHandler().getAims(false);
-      Navigator.of(context).pushNamedAndRemoveUntil('/mapScreen', (route) => false);
+      if(/*mainShared!.getInt('reportShopId') != null && */mainShared!.getInt('reportShopId') != 0){
+        customAlertChoice(context, 'Продолжить отчёт по магазину ${mainShared?.getString('shopReportName')}?',getAnswerAboutContinueReport);
+      }else{
+        Navigator.of(context).pushNamedAndRemoveUntil(
+            '/mapScreen', (route) => false);
+      }
     }else{
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
     }
+
   }
 
   Future<void> loadDB() async

@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/global/shop_points_for_job.dart';
 import 'package:shop_audit/main.dart';
 
@@ -51,7 +52,7 @@ class SocketHandler
   Future<void> sendReport(List<String> files, String text, int shopId) async
   {
     _socket.write('id=10;reload=true;addReport?report=$text;shopId=$shopId;userId=$globalUserId');
-    PointFromDbHandler().activeShop = 0;
+    GlobalHandler.activeShop = 0;
     for(int i=0;i<files.length;i++){
       if(i == 0) {
         _socket.write(';photoPaths=');

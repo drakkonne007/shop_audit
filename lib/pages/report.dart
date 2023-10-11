@@ -1,53 +1,37 @@
 import 'dart:io';
-import 'dart:typed_data';
-
-import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shop_audit/component/dynamic_alert_msg.dart';
+import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/global/shop_points_for_job.dart';
 import 'package:shop_audit/global/socket_handler.dart';
+import 'package:shop_audit/main.dart';
 import 'package:shop_audit/pages/camera_handler.dart';
 
-class ReportPage extends StatefulWidget
+class ReportPage extends StatelessWidget
 {
-  @override
-  State<ReportPage> createState() => _ReportPageState();
-}
-
-class _ReportPageState extends State<ReportPage> {
+  ReportPage({Key? key}) : super(key: key){
+    mainShared?.setString('shopReportName', PointFromDbHandler().pointsFromDb.value[GlobalHandler.activeShop]!.name);
+    mainShared?.setInt('reportShopId', GlobalHandler.activeShop);
+  }
   final TextEditingController _textController = TextEditingController();
-
-  List<String> _backupImages = [];
-
-  final ImagePicker _picker = ImagePicker();
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void dispose()
-  {
-    _textController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: const Text('Отчёт'),
+          title: Text('Отчёт: ' + PointFromDbHandler().pointsFromDb.value[GlobalHandler.activeShop]!.name ),
           actions: [
             IconButton(
               onPressed: (){
+                mainShared?.setInt('reportShopId', 0);
+                mainShared?.setStringList('photos', []);
                 List<String> paths = CameraHandler().imagePaths;
-                SocketHandler().sendReport(paths,_textController.text, PointFromDbHandler().activeShop);
+                SocketHandler().sendReport(paths,_textController.text, GlobalHandler.activeShop);
                 Navigator.pop(context);
               },
-              icon: Icon(Icons.send),
+              icon: const Icon(Icons.send),
             )
           ],
         ),
@@ -86,8 +70,8 @@ class _ReportPageState extends State<ReportPage> {
                           customAlertMsg(context, 'Нет фотографий для отчёта');
                           return;
                         }
-                        _backupImages = List.unmodifiable(CameraHandler().imagePaths);
-                        await _variantPhotos(context);
+                        List<String> curs = List.unmodifiable(CameraHandler().imagePaths);
+                        await _variantPhotos(context,curs);
                       },
                       child: const Text('Редактировать фотографии')),
                 ],
@@ -98,13 +82,15 @@ class _ReportPageState extends State<ReportPage> {
     );
   }
 
-  Future<void> _variantPhotos(BuildContext context) async
+  Future<void> _variantPhotos(BuildContext context, List<String> curs) async
   {
     return showDialog<void>(
       context: context,
       builder: (BuildContext context) {
         return Scaffold(
-          appBar: AppBar(),
+          appBar: AppBar(
+
+          ),
           body: Column(
               children: [
                 Expanded(
@@ -115,7 +101,7 @@ class _ReportPageState extends State<ReportPage> {
                           return Dismissible(
                               key: Key(index.toString()),
                               onDismissed: (direction) {
-                                CameraHandler().imagePaths.removeWhere((element) => element == _backupImages[index]);
+                                CameraHandler().imagePaths.removeWhere((element) => element == curs[index]);
                                 if(CameraHandler().imagePaths.isEmpty){
                                   Navigator.of(context).pop();
                                 }
