@@ -119,9 +119,9 @@ class DisplayPictureScreen extends StatelessWidget {
                         iconSize: 50,
                         onPressed: () {
                           CameraHandler().imagePaths.add(imagePath);
-                          var temp = mainShared?.getStringList('photos');
-                          temp?.add(imagePath);
-                          mainShared?.setStringList('photos', temp ?? []);
+                          var temp = mainShared?.getStringList('photos') ?? [];
+                          temp.add(imagePath);
+                          mainShared?.setStringList('photos', temp);
                           Navigator.of(context).pop();
                         },
                         icon: const Icon(Icons.check),

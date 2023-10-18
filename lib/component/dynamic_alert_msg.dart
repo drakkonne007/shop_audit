@@ -1,8 +1,5 @@
-
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:shop_audit/global/global_variants.dart';
 
 Future<void> customAlertMsg(BuildContext context, String text) async
 {
@@ -42,11 +39,6 @@ Future<void> customAlertChoice(BuildContext context, String text,Function(bool) 
             child: const Text('Да'),
             onPressed: () {
               answer.call(true);
-              if(Navigator.of(context).canPop()) {
-                Navigator.of(context).pushNamedAndRemoveUntil('/report', (route) => false);
-              }else{
-                Navigator.of(context).pushNamed('/report');
-              }
             },
           ),
           TextButton(
@@ -56,11 +48,6 @@ Future<void> customAlertChoice(BuildContext context, String text,Function(bool) 
             child: const Text('Нет'),
             onPressed: () {
               answer.call(false);
-              if(Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-              }else{
-                Navigator.of(context).pushNamedAndRemoveUntil('/mapScreen', (route) => false);
-              }
             },
           ),
         ],
@@ -68,3 +55,5 @@ Future<void> customAlertChoice(BuildContext context, String text,Function(bool) 
     },
   );
 }
+
+

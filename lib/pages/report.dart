@@ -1,34 +1,37 @@
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:shop_audit/component/dynamic_alert_msg.dart';
 import 'package:shop_audit/global/global_variants.dart';
-import 'package:shop_audit/global/shop_points_for_job.dart';
 import 'package:shop_audit/global/socket_handler.dart';
 import 'package:shop_audit/main.dart';
 import 'package:shop_audit/pages/camera_handler.dart';
 
 class ReportPage extends StatelessWidget
 {
-  ReportPage({Key? key}) : super(key: key){
-    mainShared?.setString('shopReportName', PointFromDbHandler().pointsFromDb.value[GlobalHandler.activeShop]!.name);
-    mainShared?.setInt('reportShopId', GlobalHandler.activeShop);
-  }
   final TextEditingController _textController = TextEditingController();
-
   @override
   Widget build(BuildContext context) {
+    mainShared?.setString('shopReportName',  GlobalHandler.activeShopName);
+    mainShared?.setInt('reportShopId', GlobalHandler.activeShop);
     return Scaffold(
         appBar: AppBar(
-          title: Text('Отчёт: ' + PointFromDbHandler().pointsFromDb.value[GlobalHandler.activeShop]!.name ),
+          title: Text('Отчёт: ${GlobalHandler.activeShopName}'),
           actions: [
             IconButton(
               onPressed: (){
-                mainShared?.setInt('reportShopId', 0);
-                mainShared?.setStringList('photos', []);
+                if(SocketHandler().socketState.value != SocketState.connected){
+                  customAlertMsg(context, 'Нет соединения с сервером! Подождите немного!');
+                  return;
+                }
                 List<String> paths = CameraHandler().imagePaths;
-                SocketHandler().sendReport(paths,_textController.text, GlobalHandler.activeShop);
+                int toSend = GlobalHandler.activeShop;
+                SocketHandler().sendReport(paths,_textController.text, toSend);
+                mainShared!.setInt('reportShopId', 0);
+                mainShared!.setStringList('photos', []);
+                mainShared!.setString('shopReportName', '');
+                GlobalHandler.activeShop = 0;
+                GlobalHandler.activeShopName = '';
                 Navigator.pop(context);
               },
               icon: const Icon(Icons.send),
@@ -88,9 +91,7 @@ class ReportPage extends StatelessWidget
       context: context,
       builder: (BuildContext context) {
         return Scaffold(
-          appBar: AppBar(
-
-          ),
+          appBar: AppBar(),
           body: Column(
               children: [
                 Expanded(
@@ -102,6 +103,7 @@ class ReportPage extends StatelessWidget
                               key: Key(index.toString()),
                               onDismissed: (direction) {
                                 CameraHandler().imagePaths.removeWhere((element) => element == curs[index]);
+                                mainShared?.setStringList('photos', CameraHandler().imagePaths);
                                 if(CameraHandler().imagePaths.isEmpty){
                                   Navigator.of(context).pop();
                                 }

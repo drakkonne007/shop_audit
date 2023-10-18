@@ -2,15 +2,16 @@
 
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
-import 'package:shop_audit/global/global_variants.dart';
+import 'package:flutter/material.dart';
+import 'package:shop_audit/component/location_global.dart';
 import 'package:shop_audit/global/shop_points_for_job.dart';
 import 'package:shop_audit/main.dart';
 
-Uint8List _imgsDecode(String file)
+enum SocketState
 {
-  var bytes = File(file).readAsBytesSync();
-  return bytes;
+  notInitialize,
+  connected,
+  disconnected
 }
 
 class SocketHandler
@@ -24,40 +25,73 @@ class SocketHandler
   String _buffer = '';
   bool isLoad = false;
   DateTime? _lastAimUpdate;
-  int countOfReconnect = 0;
+  bool isLoading = true;
+  ValueNotifier<SocketState> socketState = ValueNotifier(SocketState.notInitialize);
 
   Function(bool isLogged)? isLoginFunc;
+  Function()? _updateApp;
   Future<void> init() async
   {
     try {
+      isLoading = false;
       _socket = await Socket.connect('195.38.167.138', 9891);
       // _socket = await Socket.connect('192.168.56.1', 9891);
       _socket.listen(_dataRecive,
-          onDone: () {countOfReconnect = 0;},
+          onDone: () {
+            print('onDone');
+            if(!isLoading){
+              socketState.value = SocketState.disconnected;
+              isLoading = true;
+              Future.delayed(const Duration(seconds: 1),init);
+            }
+          },
           onError: (error) {
-            if(countOfReconnect < 30){
-              init();
+            print('onError');
+            if(!isLoading){
+              socketState.value = SocketState.disconnected;
+              isLoading = true;
+              Future.delayed(const Duration(seconds: 1),init);
             }
           },
           cancelOnError: false);
       _socket.write('auditor:12345\x17');
       isLoad = true;
+      socketState.value = SocketState.connected;
     }catch (e){
-      isLoad = false;
+      if(!isLoading){
+        socketState.value = SocketState.disconnected;
+        isLoading = true;
+        Future.delayed(const Duration(seconds: 1),init);
+      }
     }
   }
+  //(int@userId,real@xCoord,real@yCoord,text@name,text@description,time without time zone@startHours,time without time zone@finishHours) AS INSERT INTO shop_audit_clear.shop(user_id,x,y,name,description,start_work_time,finish_work_time) VALUES  (@userId,@xCoord,@yCoord,@name,@description,@startHours,@finishHours)
+  void addShop(String name, String desc)
+  {
+    var temp = LocationHandler().currentLocation;
+    _sendMessage(text: 'newShop?userId=$globalUserId;description=$desc;name=$name;xCoord=${temp.latitude};yCoord=${temp.longitude}',reload:true);
+  }
 
+  void getCurrentBuild(Function() update)
+  {
+    print('send get BUILD');
+    _updateApp = update;
+    _sendMessage(text:'getCurrentBuild?version=$versionApk',reload:false);
+  }
 
+  void sendMyPosition(double xCoord,double yCoord)
+  {
+    _sendMessage(text:'setCurrPosition?auditorId=$globalUserId;xCoord=$xCoord;yCoord=$yCoord',reload:true);
+  }
 
-  Future<void> sendReport(List<String> files, String text, int shopId) async
+  void sendReport(List<String> files, String text, int shopId)
   {
     _socket.write('id=10;reload=true;addReport?report=$text;shopId=$shopId;userId=$globalUserId');
-    GlobalHandler.activeShop = 0;
     for(int i=0;i<files.length;i++){
       if(i == 0) {
         _socket.write(';photoPaths=');
       }
-      _socket.write(await compute(_imgsDecode, files[i]));
+      _socket.write(File(files[i]).readAsBytesSync());
     }
     _socket.write('\x17');
   }
@@ -86,6 +120,30 @@ class SocketHandler
     if(text.contains('shopAims')){
       _catchAims(text);
       return;
+    }
+    if(text.contains('getCurrentBuild')){
+      _catchBuild(text);
+      return;
+    }
+  }
+
+  void _catchBuild(String text)
+  {
+    print('catch get BUILD');
+    var answer = text.split('\r');
+    if (answer.length < 3) {
+      return;
+    }
+    var categories = answer[1].split(';');
+    for (int i = 2; i < answer.length; i++) {
+      var temp = answer[i].split(';');
+      if(categories.contains('build')){
+        if(int.parse(temp[categories.indexOf('build')]) > versionApk){
+          _updateApp?.call();
+          return;
+        }
+      }
+      break;
     }
   }
 
@@ -152,11 +210,14 @@ class SocketHandler
 
   Future<void> _sendMessage({required String text, bool reload=false}) async
   {
+    if(_socket.isBroadcast){
+
+    }
     String question = 'id=10;';
     if(reload){
       question += 'reload=true;';
     }
-    question += text + '\x17';
+    question += '$text\x17';
     _socket.write(question);
   }
 

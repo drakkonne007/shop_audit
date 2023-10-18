@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shop_audit/pages/load_splash.dart';
 import 'package:shop_audit/pages/login.dart';
+import 'package:shop_audit/pages/new_shop.dart';
 import 'package:shop_audit/pages/photo_page.dart';
 import 'package:shop_audit/pages/report.dart';
 import 'package:shop_audit/pages/map_screen.dart';
+import 'package:shop_audit/global/database.dart';
 
 SharedPreferences? mainShared;
 int? globalUserId;
+const int versionApk = 0;
 
 String presentDateTime(DateTime dateTime, {bool seconds = false})
 {
@@ -21,11 +24,15 @@ String presentDateTime(DateTime dateTime, {bool seconds = false})
 Future<void> main() async{
   WidgetsFlutterBinding.ensureInitialized();
   mainShared = await SharedPreferences.getInstance();
-  runApp(MyApp());
+  // if(await DatabaseClient().openDB()){
+  //   await DatabaseClient().getShopPoints();
+  // }
+  // exit(0);
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  MyApp({super.key});
+  const MyApp({super.key});
 
   MaterialColor getMaterialColor(Color color) {
     final int red = color.red;
@@ -44,7 +51,6 @@ class MyApp extends StatelessWidget {
       800: Color.fromRGBO(red, green, blue, .9),
       900: Color.fromRGBO(red, green, blue, 1),
     };
-
     return MaterialColor(color.value, shades);
   }
 
@@ -62,6 +68,7 @@ class MyApp extends StatelessWidget {
         '/mapScreen': (context) => const MapScreen(),
         '/login': (context) => LoginPage(),
         '/photoPage': (context) => PhotoPage(),
+        '/newShop': (context) => NewShopPage(),
         // '/points': (context) => PointsPage(),
         '/report': (context) => ReportPage(),
         '/loadSplash': (context) => LoadSplash(),

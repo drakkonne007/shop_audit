@@ -25,11 +25,16 @@ class _LoadSplashState extends State<LoadSplash> {
   {
     if(isNeed){
         GlobalHandler.activeShop = mainShared!.getInt('reportShopId') ?? 0;
-        if(mainShared?.getStringList('photos') != null){
-          CameraHandler().imagePaths.addAll(mainShared?.getStringList('photos') ?? []);
+        GlobalHandler.activeShopName = mainShared!.getString('shopReportName') ?? '';
+        if(mainShared!.getStringList('photos') != null){
+          CameraHandler().imagePaths.addAll(mainShared!.getStringList('photos') ?? []);
         }
-        Navigator.of(context).pushNamedAndRemoveUntil('/report', (route) => false);
+        Navigator.of(context).pushNamedAndRemoveUntil('/mapScreen', (route) => false);
+        Navigator.of(context).pushNamed('/report');
     }else{
+      mainShared!.setInt('reportShopId', 0);
+      mainShared!.setStringList('photos', []);
+      mainShared!.setString('shopReportName', '');
       Navigator.of(context).pushNamedAndRemoveUntil(
           '/mapScreen', (route) => false);
     }
@@ -41,8 +46,8 @@ class _LoadSplashState extends State<LoadSplash> {
     if(result){
       SocketHandler().loadShops(false);
       SocketHandler().getAims(false);
-      if(/*mainShared!.getInt('reportShopId') != null && */mainShared!.getInt('reportShopId') != 0){
-        customAlertChoice(context, 'Продолжить отчёт по магазину ${mainShared?.getString('shopReportName')}?',getAnswerAboutContinueReport);
+      if(mainShared!.getInt('reportShopId') != null && mainShared?.getInt('reportShopId') != 0){
+        customAlertChoice(context, 'Продолжить отчёт по магазину ${mainShared!.getString('shopReportName') ?? ''}?',getAnswerAboutContinueReport);
       }else{
         Navigator.of(context).pushNamedAndRemoveUntil(
             '/mapScreen', (route) => false);

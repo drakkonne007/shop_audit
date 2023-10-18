@@ -4,10 +4,12 @@ import 'dart:math';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shop_audit/component/app_location.dart';
 import 'package:shop_audit/component/dynamic_alert_msg.dart';
 import 'package:shop_audit/component/location.dart';
 import 'package:shop_audit/component/location_global.dart';
+import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/global/socket_handler.dart';
 import 'package:shop_audit/main.dart';
 import 'package:shop_audit/pages/camera_handler.dart';
@@ -29,21 +31,29 @@ class _MapScreenState extends State<MapScreen>
   final List<int> _activeShops = [];
   Map<int,int> _shopIdAim = {}; //shopId userId
   late Timer _timerSelfLocation;
+  late Timer _timerSetMyLocation;
   int _lastAimId = -1;
   int selfId = 0;
   AppLatLong _myLocation = BishkekLocation();
+  bool _isReconnect = false;
 
   @override
   void initState()
   {
+    print('initState');
     _mapObjects = returnListMapObjects();
     _initPermission().ignore();
     PointFromDbHandler().pointsFromDb.addListener(_changeObjects);
     PointFromDbHandler().userActivePoints.addListener(_changeUsersAim);
+    SocketHandler().socketState.addListener(checkReconnect);
     _shopIdAim = PointFromDbHandler().userActivePoints.value;
     _timerSelfLocation = Timer.periodic(const Duration(seconds: 2),(timer){
       SocketHandler().getAims(false);
       _fetchCurrentLocation(false);
+    });
+    _timerSetMyLocation = Timer.periodic(const Duration(seconds: 30),(timer){
+      var temp = LocationHandler().currentLocation;
+      SocketHandler().sendMyPosition(temp.latitude, temp.longitude);
     });
     super.initState();
   }
@@ -51,7 +61,9 @@ class _MapScreenState extends State<MapScreen>
   void reloadAll()
   {
     SocketHandler().loadShops(true);
-    _mapObjects = returnListMapObjects();
+    setState(() {
+      _mapObjects = returnListMapObjects();
+    });
     _refreshActiveShops();
   }
 
@@ -59,9 +71,25 @@ class _MapScreenState extends State<MapScreen>
   void dispose()
   {
     _timerSelfLocation.cancel();
+    _timerSetMyLocation.cancel();
     PointFromDbHandler().pointsFromDb.removeListener(_changeObjects);
     PointFromDbHandler().userActivePoints.removeListener(_changeUsersAim);
+    SocketHandler().socketState.removeListener(checkReconnect);
     super.dispose();
+  }
+
+  void checkReconnect()
+  {
+      if(SocketHandler().socketState.value == SocketState.disconnected && !_isReconnect){
+        setState(() {
+          _isReconnect = true;
+        });
+      }
+      if(SocketHandler().socketState.value == SocketState.connected && _isReconnect){
+        setState(() {
+          _isReconnect = false;
+        });
+      }
   }
 
   void _changeUsersAim()
@@ -177,7 +205,6 @@ class _MapScreenState extends State<MapScreen>
 
   @override
   Widget build(BuildContext context) {
-    print('build)');
     var allList = PointFromDbHandler().pointsFromDb.value.values.toList();
     return Scaffold(
         drawerEnableOpenDragGesture: false,
@@ -187,9 +214,17 @@ class _MapScreenState extends State<MapScreen>
                 children:[
                   const SizedBox(height: 30,),
                   ElevatedButton(onPressed: (){
+                    if(SocketHandler().socketState.value != SocketState.connected){
+                      customAlertMsg(context, 'Нет соединения с сервером! Подождите немного!');
+                      return;
+                    }
+                    Navigator.of(context).pushNamed('/newShop');
+                  }, child: const Text('Добавить магазин')
+                  ),
+                  ElevatedButton(onPressed: (){
                     PointFromDbHandler().showAllPointByUser();
                     PointFromDbHandler().pointsFromDb.notifyListeners();
-                  }, child: Text('Сбросить отмеченные ыручную')
+                  }, child: Text('Сбросить отмеченные вручную')
                   ),
                   ElevatedButton(onPressed: (){
                     PointFromDbHandler().sortType = SortType.None;
@@ -202,12 +237,6 @@ class _MapScreenState extends State<MapScreen>
                     PointFromDbHandler().showAllPointByUser();
                     PointFromDbHandler().pointsFromDb.notifyListeners();
                   }, child: Text('Ближе 5 километров')
-                  ),
-                  ElevatedButton(onPressed: (){
-                    PointFromDbHandler().sortType = SortType.DateTimeCreated;
-                    PointFromDbHandler().showAllPointByUser();
-                    PointFromDbHandler().pointsFromDb.notifyListeners();
-                  }, child: Text('За последний месяц')
                   ),
                   Expanded(
                       child:
@@ -262,13 +291,18 @@ class _MapScreenState extends State<MapScreen>
             },
                 child: const Icon(Icons.refresh)),
             ElevatedButton(onPressed: () async{
+              if(SocketHandler().socketState.value != SocketState.connected){
+                customAlertMsg(context, 'Нет соединения с сервером! Подождите немного!');
+                return;
+              }
               switch(_activeShops.length){
                 case 0: {
                   await customAlertMsg(context,'Рядом нет магазина!');
                 }
                 break;
                 case 1: {
-                  PointFromDbHandler().activeShop = _activeShops[0];
+                  GlobalHandler.activeShop = _activeShops[0];
+                  GlobalHandler.activeShopName = PointFromDbHandler().pointsFromDb.value[_activeShops[0]]!.name;
                   CameraHandler().imagePaths = [];
                   Navigator.of(context).pushNamed('/report');
                 }
@@ -306,7 +340,13 @@ class _MapScreenState extends State<MapScreen>
                       _fetchCurrentLocation(true);
                     }
                 ),
-              )
+              ),
+              _isReconnect ? const Align(
+                alignment: Alignment.topCenter,
+                child: Text('____Обрыв сети_____',
+                  style: TextStyle(color: Colors.red, fontSize: 25, fontWeight: FontWeight.bold,backgroundColor: Colors.black),
+                )
+              ) : Container()
             ]
         )
     );
@@ -440,9 +480,10 @@ class _MapScreenState extends State<MapScreen>
                         itemCount: temp.length,
                         itemBuilder: (BuildContext context, int index){
                           return ElevatedButton(onPressed: (){
-                            PointFromDbHandler().activeShop = temp[index];
+                            GlobalHandler.activeShop = _activeShops[0];
+                            GlobalHandler.activeShopName = PointFromDbHandler().pointsFromDb.value[_activeShops[0]]!.name;
                             CameraHandler().imagePaths = [];
-                            Navigator.of(context).pushNamed('/report');
+                            Navigator.of(context).pushNamedAndRemoveUntil('/report',(route) => false);
                           }, child: Text( PointFromDbHandler().pointsFromDb.value[temp[index]]!.name));
                         }
                     )
@@ -503,3 +544,40 @@ Future<void> logOut(BuildContext context) async
     },
   );
 }
+//
+// Future<void> updateProgramDialog(BuildContext context)
+// {
+//   return showDialog<void>(
+//     context: context,
+//     builder: (BuildContext context) {
+//       return AlertDialog(
+//         title:  Text('Вышла новая версия программы. Для дальнейшей работы необходимо обновить приложение'),
+//         actions: <Widget>[
+//           TextButton(
+//             style: TextButton.styleFrom(
+//               textStyle: Theme.of(context).textTheme.labelLarge,
+//             ),
+//             child: const Text('Обновить'),
+//             onPressed: () async{
+//               final dir =
+//               await getApplicationDocumentsDirectory();
+// //From path_provider package
+//               var _localPath = dir.path + 'apk';
+//               final savedDir = Directory(_localPath);
+//               savedDir.create(recursive: true).then((value) async {
+//                 String? _taskid = await FlutterDownloader.enqueue(
+//                   url: 'https://shop-audit.icu/pages/apk_page/build.apk',
+//                   fileName: 'smartConSol.apk',
+//                   savedDir: _localPath,
+//                   showNotification: true,
+//                   openFileFromNotification: true,
+//                 );
+//                 print(_taskid);
+//               });
+//             },
+//           ),
+//         ],
+//       );
+//     },
+//   );
+// }
