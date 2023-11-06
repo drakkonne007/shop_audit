@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shop_audit/pages/load_splash.dart';
@@ -25,7 +26,8 @@ Future<void> main() async{
   WidgetsFlutterBinding.ensureInitialized();
   mainShared = await SharedPreferences.getInstance();
   // if(await DatabaseClient().openDB()){
-  //   await DatabaseClient().getShopPoints();
+  //   // await DatabaseClient().getShopPoints();
+  //   await DatabaseClient().getReverseShopPoints();
   // }
   // exit(0);
   runApp(const MyApp());
@@ -60,7 +62,8 @@ class MyApp extends StatelessWidget {
       title: 'Yandex Map',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.brown,
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       initialRoute: '/loadSplash',

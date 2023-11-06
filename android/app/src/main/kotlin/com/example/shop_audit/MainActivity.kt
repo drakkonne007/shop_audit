@@ -8,6 +8,7 @@ import androidx.annotation.NonNull
 class MainActivity: FlutterActivity()
 {
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine){
+        MapKitFactory.setLocale("RU_ru")
         MapKitFactory.setApiKey("3cfd11d4-91b7-47a1-85a1-3747453b7a2b")
         super.configureFlutterEngine(flutterEngine)
     }

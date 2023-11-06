@@ -24,6 +24,37 @@ class DatabaseClient
     return true;
   }
 
+  Future getReverseShopPoints() async
+  {
+    String quer = r'SELECT id,x,y FROM shop_audit_clear.shop WHERE address IS NULL';
+    var result = await connection.query(quer);
+    var columnNames = result.columnDescriptions;
+    Map<String,int> map = {};
+    for(int i=0;i<columnNames.length;i++){
+      map.putIfAbsent(columnNames[i].columnName, () => i);
+    }
+    int t = 0;
+    for (final row in result) {
+      Point point = Point(
+        latitude: row[map['x']!],
+        longitude: row[map['y']!],
+      );
+      final resultWithSession = YandexSearch.searchByPoint(
+        point: point,
+        searchOptions: const SearchOptions(
+          searchType: SearchType.geo,
+          geometry: false,
+        ),
+      );
+      var ss = await resultWithSession.result;
+      if(ss.items?[0].toponymMetadata == null || ss.items == null){
+        continue;
+      }
+      connection.execute('UPDATE shop_audit_clear.shop SET address = \'${ss.items?[0].toponymMetadata!.address.formattedAddress}\' WHERE id = ${row[map['id']!]}');
+      print(ss.items?[0].toponymMetadata!.address.formattedAddress);
+    }
+  }
+
   Future<void> getShopPoints() async
   {
     String quer = r'SELECT id,address_for_yandex FROM shop_audit_clear.shop WHERE x=-1 AND id != 1';

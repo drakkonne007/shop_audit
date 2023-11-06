@@ -32,7 +32,7 @@ class ReportPage extends StatelessWidget
                 mainShared!.setString('shopReportName', '');
                 GlobalHandler.activeShop = 0;
                 GlobalHandler.activeShopName = '';
-                Navigator.pop(context);
+                Navigator.of(context).pushNamedAndRemoveUntil('/mapScreen', (route) => false);
               },
               icon: const Icon(Icons.send),
             )

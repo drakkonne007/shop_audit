@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shop_audit/component/app_location.dart';
@@ -55,6 +56,7 @@ class _MapScreenState extends State<MapScreen>
       var temp = LocationHandler().currentLocation;
       SocketHandler().sendMyPosition(temp.latitude, temp.longitude);
     });
+    // SocketHandler().getCurrentBuild(downloadFile);
     super.initState();
   }
 
@@ -65,6 +67,49 @@ class _MapScreenState extends State<MapScreen>
       _mapObjects = returnListMapObjects();
     });
     _refreshActiveShops();
+  }
+
+  Future<void> downloadFile() async {
+
+    HttpClient httpClient = HttpClient();
+    File file;
+    String myUrl = ' http://shop-audit.icu/pages/apk_page/SmartConSol.apk';
+    try {
+      var dir = await getApplicationDocumentsDirectory();
+      String output = dir.path + '/SmartConSol.apk';
+      var request = await httpClient.getUrl(Uri.parse(myUrl));
+      var response = await request.close();
+      if(response.statusCode == 200) {
+        var bytes = await consolidateHttpClientResponseBytes(response);
+        file = File(output);
+        await file.writeAsBytes(bytes);
+        return showDialog<void>(
+          //PointFromDbHandler().activeShop = _activeShops[0];
+          context: context,
+          builder: (BuildContext context) {
+            return Scaffold(
+                appBar: AppBar(),
+                body: ElevatedButton(
+                  onPressed: () {
+                    AndroidIntent intent = AndroidIntent(
+                      action: 'action_view',
+                      data: file.path,
+                      type: 'application/vnd.android.package-archive',
+                    );
+                  },
+                  child: Text('установить новую версию'),
+                )
+            );
+          },
+        );
+      }else{
+       print('Error code: '+response.statusCode.toString());
+      }
+    }
+    catch(ex){
+      print(ex);
+    }
+
   }
 
   @override
@@ -465,7 +510,7 @@ class _MapScreenState extends State<MapScreen>
 
   Future<void> _variantsShops(BuildContext context) async
   {
-    var temp = List.unmodifiable(_activeShops);
+    List<int> temp = List.unmodifiable(_activeShops);
     return showDialog<void>(
       //PointFromDbHandler().activeShop = _activeShops[0];
       context: context,
@@ -480,10 +525,10 @@ class _MapScreenState extends State<MapScreen>
                         itemCount: temp.length,
                         itemBuilder: (BuildContext context, int index){
                           return ElevatedButton(onPressed: (){
-                            GlobalHandler.activeShop = _activeShops[0];
-                            GlobalHandler.activeShopName = PointFromDbHandler().pointsFromDb.value[_activeShops[0]]!.name;
+                            GlobalHandler.activeShop = temp[index];
+                            GlobalHandler.activeShopName = PointFromDbHandler().pointsFromDb.value[temp[index]]!.name;
                             CameraHandler().imagePaths = [];
-                            Navigator.of(context).pushNamedAndRemoveUntil('/report',(route) => false);
+                            Navigator.of(context).pushNamed('/report');
                           }, child: Text( PointFromDbHandler().pointsFromDb.value[temp[index]]!.name));
                         }
                     )
@@ -498,6 +543,7 @@ class _MapScreenState extends State<MapScreen>
       },
     );
   }
+
   Color getColor(int id)
   {
     if(_shopIdAim.containsValue(id)){
