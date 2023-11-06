@@ -3,9 +3,11 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart';
 import 'package:shop_audit/component/location_global.dart';
 import 'package:shop_audit/global/shop_points_for_job.dart';
 import 'package:shop_audit/main.dart';
+import 'package:sqflite/sqflite.dart';
 
 enum SocketState
 {
@@ -27,11 +29,22 @@ class SocketHandler
   DateTime? _lastAimUpdate;
   bool isLoading = true;
   ValueNotifier<SocketState> socketState = ValueNotifier(SocketState.notInitialize);
+  Database? _database;
+  int _id = 0;
 
   Function(bool isLogged)? isLoginFunc;
   Function()? _updateApp;
+
+  int _getId()
+  {
+    return _id++;
+  }
+
   Future<void> init() async
   {
+    if(_database == null){
+      openDb();
+    }
     try {
       isLoading = false;
       _socket = await Socket.connect('195.38.167.138', 9891);
@@ -84,16 +97,71 @@ class SocketHandler
     _sendMessage(text:'setCurrPosition?auditorId=$globalUserId;xCoord=$xCoord;yCoord=$yCoord',reload:true);
   }
 
-  void sendReport(List<String> files, String text, int shopId)
+  void openDb() async
   {
-    _socket.write('id=10;reload=true;addReport?report=$text;shopId=$shopId;userId=$globalUserId');
-    for(int i=0;i<files.length;i++){
-      if(i == 0) {
-        _socket.write(';photoPaths=');
-      }
-      _socket.write(File(files[i]).readAsBytesSync());
+    var databasesPath = await getDatabasesPath();
+    String path = join(databasesPath, 'reports.db');
+    _database = await openDatabase(path, version: 1,
+        onCreate: (Database db, int version)async {
+      await db.execute('CREATE TABLE report (id INTEGER PRIMARY KEY autoincrement NOT NULL,photo_path TEXT, report_text TEXT, shop_id INTEGER NOT NULL,'
+          'user_id INTEGER NOT NULL, millisecs_since_epoch INTEGER NOT NULL)');
+    });
+  }
+
+  Future _createDbDump(List<String> files, String text, int shopId) async
+  {
+    await _database?.execute('INSERT INTO report(photo_path, report_text, shop_id, user_id, millisecs_since_epoch) VALUES '
+        '("${files.join(',')}", "$text", $shopId, $globalUserId, ${DateTime.now().millisecondsSinceEpoch})');
+  }
+
+  Future<int> getLastRawInt() async
+  {
+    var res = await _database?.rawQuery('SELECT id FROM report ORDER BY id DESC LIMIT 1');
+    if(res != null){
+        return res[0]['id']! as int;
     }
-    _socket.write('\x17');
+    return 0;
+  }
+
+  void checkLostReports() async
+  {
+    var res = await _database?.rawQuery('SELECT * FROM report ORDER BY id');
+    if(res != null){
+      for(final raw in res){
+        _sendMessage(text:'checkReport?extId=${raw['id']};userId=${raw['user_id']};shopId=${raw['shop_id']}',reload:true);
+      }
+    }
+    Future.delayed(const Duration(minutes: 2),_reSendReports);
+  }
+
+  void sendReport(List<String> files, String text, int shopId, {bool needCache = true, int extId=0})
+  {
+    int ext = extId;
+    if(needCache){
+      _createDbDump(files, text, shopId).then((value){
+        getLastRawInt().then((value){
+          ext = value;
+          print('current id in sqlite = $ext');
+          _socket.write('id=10;reload=true;addReport?report=$text;${ext == 0 ? '' : 'extId=$ext;'}shopId=$shopId;userId=$globalUserId');
+          for(int i=0;i<files.length;i++){
+            if(i == 0) {
+              _socket.write(';photoPaths=');
+            }
+            _socket.write(File(files[i]).readAsBytesSync());
+          }
+          _socket.write('\x17');
+        });
+      });
+    }else{
+      _socket.write('id=10;reload=true;addReport?report=$text;${ext == 0 ? '' : 'extId=$ext;'}shopId=$shopId;userId=$globalUserId');
+      for(int i=0;i<files.length;i++){
+        if(i == 0) {
+          _socket.write(';photoPaths=');
+        }
+        _socket.write(File(files[i]).readAsBytesSync());
+      }
+      _socket.write('\x17');
+    }
   }
 
   void _dataRecive(data) async{
@@ -107,8 +175,46 @@ class SocketHandler
     }
   }
 
+  void _catchCheckReport(String text) async
+  {
+    var answer = text.split('\r');
+    if (answer.length < 3) {
+      return;
+    }
+    var categories = answer[1].split(';');
+    for (int i=2; i<answer.length; i++) {
+      var temp = answer[i].split(';');
+      if(categories.contains('sqlite_ext_id')){
+        int id = int.parse(temp[categories.indexOf('sqlite_ext_id')]);
+        await _database?.execute('DELETE FROM report WHERE id=$id');
+      }
+    }
+  }
+
+  void _reSendReports() async
+  {
+    var res = await _database?.rawQuery('SELECT * FROM report ORDER BY id');
+    if(res != null) {
+      for (final raw in res) {
+        DateTime dtime = DateTime.fromMillisecondsSinceEpoch(raw['millisecs_since_epoch'] as int);
+        if(dtime.difference(DateTime.now()).inMinutes.abs() > 5) {
+          List<String> files = [];
+          String? text = raw['photo_path'] as String?;
+          if(text != null && text != ''){
+            files = text.split(',');
+          }
+          sendReport(files, raw['report_text'] as String,
+              raw['shop_id'] as int, needCache: false, extId: raw['id'] as int);
+        }
+      }
+    }
+  }
+
   void _answersHub(String text)
   {
+    if(text.contains('checkReport')){
+      _catchCheckReport(text);
+    }
     if(text.contains('loadShops') || text.contains('10shops')){
       _getShopPoints(text);
       return;
@@ -208,12 +314,9 @@ class SocketHandler
     _sendMessage(text: 'updateCurrentAim?shopId=$shopId;userId=$globalUserId', reload: true);
   }
 
-  Future<void> _sendMessage({required String text, bool reload=false}) async
+  Future<void> _sendMessage({required String text, bool reload=false, int? id}) async
   {
-    if(_socket.isBroadcast){
-
-    }
-    String question = 'id=10;';
+    String question = 'id=${id ?? _getId()};';
     if(reload){
       question += 'reload=true;';
     }

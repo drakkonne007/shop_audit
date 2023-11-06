@@ -33,6 +33,7 @@ class _MapScreenState extends State<MapScreen>
   Map<int,int> _shopIdAim = {}; //shopId userId
   late Timer _timerSelfLocation;
   late Timer _timerSetMyLocation;
+  late Timer _timerResendReport;
   int _lastAimId = -1;
   int selfId = 0;
   AppLatLong _myLocation = BishkekLocation();
@@ -48,13 +49,16 @@ class _MapScreenState extends State<MapScreen>
     PointFromDbHandler().userActivePoints.addListener(_changeUsersAim);
     SocketHandler().socketState.addListener(checkReconnect);
     _shopIdAim = PointFromDbHandler().userActivePoints.value;
-    _timerSelfLocation = Timer.periodic(const Duration(seconds: 2),(timer){
-      SocketHandler().getAims(false);
+    _timerSelfLocation = Timer.periodic(const Duration(seconds: 1),(timer){
+      // SocketHandler().getAims(false);
       _fetchCurrentLocation(false);
     });
     _timerSetMyLocation = Timer.periodic(const Duration(seconds: 30),(timer){
       var temp = LocationHandler().currentLocation;
       SocketHandler().sendMyPosition(temp.latitude, temp.longitude);
+    });
+    _timerResendReport = Timer.periodic(const Duration(minutes: 5),(timer){
+      SocketHandler().checkLostReports();
     });
     // SocketHandler().getCurrentBuild(downloadFile);
     super.initState();
@@ -117,6 +121,7 @@ class _MapScreenState extends State<MapScreen>
   {
     _timerSelfLocation.cancel();
     _timerSetMyLocation.cancel();
+    _timerResendReport.cancel();
     PointFromDbHandler().pointsFromDb.removeListener(_changeObjects);
     PointFromDbHandler().userActivePoints.removeListener(_changeUsersAim);
     SocketHandler().socketState.removeListener(checkReconnect);
