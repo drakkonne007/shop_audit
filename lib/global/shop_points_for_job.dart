@@ -2,7 +2,7 @@
 import 'dart:math';
 
 import 'package:flutter/cupertino.dart';
-import 'package:shop_audit/component/location_global.dart';
+import 'package:shop_audit/global/global_variants.dart';
 
 double metersInOneAngle = 40075.0 / 360.0 * 1000.0;
 
@@ -72,7 +72,7 @@ class PointFromDbHandler
         return filteredList;
       }
       case SortType.Distance:
-        var selfLocation = LocationHandler().currentLocation;
+        var selfLocation = GlobalHandler.currentUserPoint;
         for(int i=0;i<allList.length;i++){
           if(sqrt(pow(allList[i].x - selfLocation.latitude,2) + pow(allList[i].y - selfLocation.longitude,2)) *  metersInOneAngle > 5000){
             allList[i].isNeedDrawBySort = false;

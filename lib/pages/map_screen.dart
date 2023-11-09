@@ -5,17 +5,16 @@ import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shop_audit/component/app_location.dart';
 import 'package:shop_audit/component/dynamic_alert_msg.dart';
-import 'package:shop_audit/component/location.dart';
-import 'package:shop_audit/component/location_global.dart';
 import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/global/socket_handler.dart';
 import 'package:shop_audit/main.dart';
 import 'package:shop_audit/pages/camera_handler.dart';
 import 'package:yandex_mapkit/yandex_mapkit.dart';
 import 'package:shop_audit/global/shop_points_for_job.dart';
+import 'package:http/http.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({Key? key}) : super(key: key);
@@ -26,7 +25,7 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen>
 {
-  final mapControllerCompleter = Completer<YandexMapController>();
+  YandexMapController? _mapController;
   Map<int,PlacemarkMapObject> _mapObjects = {};
   List<PointFromDb> _sourcePoints  = [];
   final List<int> _activeShops = [];
@@ -35,32 +34,26 @@ class _MapScreenState extends State<MapScreen>
   late Timer _timerSetMyLocation;
   late Timer _timerResendReport;
   int _lastAimId = -1;
-  int selfId = 0;
-  AppLatLong _myLocation = BishkekLocation();
   bool _isReconnect = false;
 
   @override
   void initState()
   {
-    print('initState');
     _mapObjects = returnListMapObjects();
-    _initPermission().ignore();
     PointFromDbHandler().pointsFromDb.addListener(_changeObjects);
     PointFromDbHandler().userActivePoints.addListener(_changeUsersAim);
     SocketHandler().socketState.addListener(checkReconnect);
     _shopIdAim = PointFromDbHandler().userActivePoints.value;
-    _timerSelfLocation = Timer.periodic(const Duration(seconds: 1),(timer){
-      // SocketHandler().getAims(false);
+    _timerSelfLocation = Timer.periodic(const Duration(seconds: 1),(timer) async{
       _fetchCurrentLocation(false);
     });
     _timerSetMyLocation = Timer.periodic(const Duration(seconds: 30),(timer){
-      var temp = LocationHandler().currentLocation;
-      SocketHandler().sendMyPosition(temp.latitude, temp.longitude);
+      SocketHandler().sendMyPosition(GlobalHandler.currentUserPoint.latitude, GlobalHandler.currentUserPoint.longitude);
     });
-    _timerResendReport = Timer.periodic(const Duration(minutes: 5),(timer){
+    _timerResendReport = Timer.periodic(const Duration(minutes: 1),(timer){
       SocketHandler().checkLostReports();
     });
-    // SocketHandler().getCurrentBuild(downloadFile);
+    SocketHandler().getCurrentBuild(_downloadFile);
     super.initState();
   }
 
@@ -73,52 +66,20 @@ class _MapScreenState extends State<MapScreen>
     _refreshActiveShops();
   }
 
-  Future<void> downloadFile() async {
-
-    HttpClient httpClient = HttpClient();
-    File file;
-    String myUrl = ' http://shop-audit.icu/pages/apk_page/SmartConSol.apk';
-    try {
-      var dir = await getApplicationDocumentsDirectory();
-      String output = dir.path + '/SmartConSol.apk';
-      var request = await httpClient.getUrl(Uri.parse(myUrl));
-      var response = await request.close();
-      if(response.statusCode == 200) {
-        var bytes = await consolidateHttpClientResponseBytes(response);
-        file = File(output);
-        await file.writeAsBytes(bytes);
-        return showDialog<void>(
-          //PointFromDbHandler().activeShop = _activeShops[0];
-          context: context,
-          builder: (BuildContext context) {
-            return Scaffold(
-                appBar: AppBar(),
-                body: ElevatedButton(
-                  onPressed: () {
-                    AndroidIntent intent = AndroidIntent(
-                      action: 'action_view',
-                      data: file.path,
-                      type: 'application/vnd.android.package-archive',
-                    );
-                  },
-                  child: Text('установить новую версию'),
-                )
-            );
-          },
-        );
-      }else{
-       print('Error code: '+response.statusCode.toString());
-      }
-    }
-    catch(ex){
-      print(ex);
-    }
-
+  void _downloadFile() async {
+    var dir = await getExternalCacheDirectories();
+    File file = File('${dir![0].path}/SmartConSol.apk');
+    String myUrl = 'http://shop-audit.icu/pages/apk_page/SmartConSol.apk';
+    var res = await get(Uri.parse(myUrl));
+    await file.writeAsBytes(res.bodyBytes);
+    await customAlertMsg(context,'Скачано обновление, установите пожалуйста');
+    var ss = await OpenFile.open('${dir[0].path}/SmartConSol.apk');
   }
 
   @override
   void dispose()
   {
+    _mapController?.dispose();
     _timerSelfLocation.cancel();
     _timerSetMyLocation.cancel();
     _timerResendReport.cancel();
@@ -130,16 +91,16 @@ class _MapScreenState extends State<MapScreen>
 
   void checkReconnect()
   {
-      if(SocketHandler().socketState.value == SocketState.disconnected && !_isReconnect){
-        setState(() {
-          _isReconnect = true;
-        });
-      }
-      if(SocketHandler().socketState.value == SocketState.connected && _isReconnect){
-        setState(() {
-          _isReconnect = false;
-        });
-      }
+    if(SocketHandler().socketState.value == SocketState.disconnected && !_isReconnect){
+      setState(() {
+        _isReconnect = true;
+      });
+    }
+    if(SocketHandler().socketState.value == SocketState.connected && _isReconnect){
+      setState(() {
+        _isReconnect = false;
+      });
+    }
   }
 
   void _changeUsersAim()
@@ -153,7 +114,7 @@ class _MapScreenState extends State<MapScreen>
   void _refreshActiveShops()
   {
     _activeShops.clear();
-    var currLoc = LocationHandler().currentLocation;
+    var currLoc = GlobalHandler.currentUserPoint;
     for(int i=0;i<_sourcePoints.length;i++){
       if(((_sourcePoints[i].x - currLoc.latitude) * metersInOneAngle).abs() > 30){
         continue;
@@ -178,7 +139,6 @@ class _MapScreenState extends State<MapScreen>
     {
       newList.putIfAbsent( key.id, () => createPlaceMark(key));
     }
-    newList.putIfAbsent(0,() =>  selfPoint());
     return newList;
   }
 
@@ -231,28 +191,6 @@ class _MapScreenState extends State<MapScreen>
     return mapObject;
   }
 
-  PlacemarkMapObject selfPoint()
-  {
-    final mapObject = PlacemarkMapObject(
-      mapId: MapObjectId(selfId.toString()),
-      point: Point(latitude: LocationHandler().currentLocation.latitude, longitude: LocationHandler().currentLocation.longitude ),
-      opacity: 1,
-      direction: 0,
-      consumeTapEvents: true,
-      onTap: (PlacemarkMapObject mapObject, Point point) async{
-        await customAlertMsg(context,'Это я');
-      },
-      isDraggable: false,
-      icon: PlacemarkIcon.single(PlacemarkIconStyle(
-          image: BitmapDescriptor.fromAssetImage('assets/self_point.png'),
-          rotationType: RotationType.noRotation,
-          scale: 1
-      )),
-    );
-    return mapObject;
-  }
-
-
   @override
   Widget build(BuildContext context) {
     var allList = PointFromDbHandler().pointsFromDb.value.values.toList();
@@ -274,19 +212,19 @@ class _MapScreenState extends State<MapScreen>
                   ElevatedButton(onPressed: (){
                     PointFromDbHandler().showAllPointByUser();
                     PointFromDbHandler().pointsFromDb.notifyListeners();
-                  }, child: Text('Сбросить отмеченные вручную')
+                  }, child: const Text('Сбросить отмеченные вручную')
                   ),
                   ElevatedButton(onPressed: (){
                     PointFromDbHandler().sortType = SortType.None;
                     PointFromDbHandler().showAllPointByUser();
                     PointFromDbHandler().pointsFromDb.notifyListeners();
-                  }, child: Text('Все')
+                  }, child: const Text('Все')
                   ),
                   ElevatedButton(onPressed: (){
                     PointFromDbHandler().sortType = SortType.Distance;
                     PointFromDbHandler().showAllPointByUser();
                     PointFromDbHandler().pointsFromDb.notifyListeners();
-                  }, child: Text('Ближе 5 километров')
+                  }, child: const Text('Ближе 5 километров')
                   ),
                   Expanded(
                       child:
@@ -324,7 +262,7 @@ class _MapScreenState extends State<MapScreen>
                                           ))
                                   )),
                               IconButton(onPressed: (){
-                                _moveToCurrentLocation(AppLatLong(latitude: allList[index].x, longitude: allList[index].y));
+                                _moveToCurrentLocation();
                               }, icon: const Icon(Icons.gps_fixed))
                             ]);
                           }
@@ -341,6 +279,7 @@ class _MapScreenState extends State<MapScreen>
             },
                 child: const Icon(Icons.refresh)),
             ElevatedButton(onPressed: () async{
+              _refreshActiveShops();
               if(SocketHandler().socketState.value != SocketState.connected){
                 customAlertMsg(context, 'Нет соединения с сервером! Подождите немного!');
                 return;
@@ -371,9 +310,10 @@ class _MapScreenState extends State<MapScreen>
             children:[
               YandexMap(
                 tiltGesturesEnabled: false,
-                mapObjects: _mapObjects.values.toList(),
+                mapObjects: [_getClusterizedCollection(placemarks: _mapObjects.values.toList())]  ,
                 onMapCreated: (controller) {
-                  mapControllerCompleter.complete(controller);
+                  _mapController = controller;
+                  _mapController?.toggleUserLayer(visible: true);
                 },
               ),
               Align(
@@ -381,74 +321,86 @@ class _MapScreenState extends State<MapScreen>
                 child: FloatingActionButton(
                     child: const Icon(Icons.gps_fixed),
                     onPressed: () async {
-                      // bool isLoad = await DatabaseClient().openDB();
-                      // print(isLoad);
-                      // if(isLoad){
-                      //   DatabaseClient().getShopPoints();
-                      // }
-                      // return;
-                      _fetchCurrentLocation(true);
+                      await _moveToCurrentLocation();
                     }
                 ),
               ),
               _isReconnect ? const Align(
-                alignment: Alignment.topCenter,
-                child: Text('____Обрыв сети_____',
-                  style: TextStyle(color: Colors.red, fontSize: 25, fontWeight: FontWeight.bold,backgroundColor: Colors.black),
-                )
+                  alignment: Alignment.topCenter,
+                  child: Text('____Обрыв сети_____',
+                    style: TextStyle(color: Colors.red, fontSize: 25, fontWeight: FontWeight.bold,backgroundColor: Colors.black),
+                  )
               ) : Container()
             ]
         )
     );
   }
 
-  /// Проверка разрешений на доступ к геопозиции пользователя
-  Future<void> _initPermission() async
-  {
-    if (!await LocationService().checkPermission()) {
-      await LocationService().requestPermission();
-    }
-    await _fetchCurrentLocation(true);
+  ClusterizedPlacemarkCollection _getClusterizedCollection({
+    required List<PlacemarkMapObject> placemarks,
+  }) {
+
+    return ClusterizedPlacemarkCollection(
+        mapId: const MapObjectId('clusterized-1'),
+        placemarks: placemarks,
+        radius: 30,
+        minZoom: 15,
+        onClusterAdded: (self, cluster) async {
+          int count = cluster.size;
+          return cluster.copyWith(
+            appearance: cluster.appearance.copyWith(
+              opacity: 1,
+              text: PlacemarkText(text: count.toString(), style: PlacemarkTextStyle(color: Colors.blue[900], size: 16)),
+              icon: PlacemarkIcon.single(
+                PlacemarkIconStyle(
+                    image: BitmapDescriptor.fromAssetImage(
+                        'assets/cluster_point.png'),
+                    rotationType: RotationType.rotate,
+                    scale: 0.8),
+              ),
+            ),
+          );
+        },
+        onClusterTap: (self, cluster) async {
+          await _mapController?.moveCamera(
+            animation: const MapAnimation(
+                type: MapAnimationType.linear, duration: 0.3),
+            CameraUpdate.newCameraPosition(
+              CameraPosition(
+                target: cluster.placemarks.first.point,
+                zoom: 18,
+              ),
+            ),
+          );
+        });
   }
 
   /// Получение текущей геопозиции пользователя
   Future<void> _fetchCurrentLocation(bool isNeedMove) async
   {
-    AppLatLong location;
-    const defLocation = MoscowLocation();
-    try {
-      location = await LocationService().getCurrentLocation();
-    } catch (_) {
-      location = defLocation;
+    var location = await _mapController!.getUserCameraPosition();
+    if(location == null){
+      return;
     }
-    if(_myLocation.latitude != location.latitude || _myLocation.longitude != location.longitude) {
-      _myLocation = location;
-      _refreshActiveShops();
-      _changeObjects();
-    }
-    if(isNeedMove) {
-      _moveToCurrentLocation(location);
-    }
+    GlobalHandler.currentUserPoint = location.target;
   }
 
   /// Метод для показа текущей позиции
-  Future<void> _moveToCurrentLocation(AppLatLong appLatLong) async
+  Future<void> _moveToCurrentLocation() async
   {
-    (await mapControllerCompleter.future).moveCamera(
+    CameraPosition? point = await _mapController?.getUserCameraPosition();
+    if(point == null){
+      return;
+    }
+    await _mapController?.moveCamera(
       animation: const MapAnimation(type: MapAnimationType.linear, duration: 1),
       CameraUpdate.newCameraPosition(
-        CameraPosition(
-          target: Point(
-            latitude: appLatLong.latitude,
-            longitude: appLatLong.longitude,
-          ),
-          zoom: 12,
-        ),
+        point.copyWith(zoom: 18),
       ),
     );
   }
 
-  Future<void> _shopInfo(BuildContext context,PlacemarkMapObject mapObject) async
+  Future<void> _shopInfo(BuildContext context,PlacemarkMapObject mapObject)
   {
     int shopId = int.parse(mapObject.mapId.value);
     return showDialog<void>(
@@ -513,7 +465,7 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  Future<void> _variantsShops(BuildContext context) async
+  Future<void> _variantsShops(BuildContext context)
   {
     List<int> temp = List.unmodifiable(_activeShops);
     return showDialog<void>(
@@ -541,7 +493,7 @@ class _MapScreenState extends State<MapScreen>
                 const SizedBox(height: 20),
                 ElevatedButton(onPressed: (){
                   Navigator.of(context).pop();
-                }, child: Text('Отмена'))
+                }, child: const Text('Отмена'))
               ]
           ),
         );
@@ -595,40 +547,3 @@ Future<void> logOut(BuildContext context) async
     },
   );
 }
-//
-// Future<void> updateProgramDialog(BuildContext context)
-// {
-//   return showDialog<void>(
-//     context: context,
-//     builder: (BuildContext context) {
-//       return AlertDialog(
-//         title:  Text('Вышла новая версия программы. Для дальнейшей работы необходимо обновить приложение'),
-//         actions: <Widget>[
-//           TextButton(
-//             style: TextButton.styleFrom(
-//               textStyle: Theme.of(context).textTheme.labelLarge,
-//             ),
-//             child: const Text('Обновить'),
-//             onPressed: () async{
-//               final dir =
-//               await getApplicationDocumentsDirectory();
-// //From path_provider package
-//               var _localPath = dir.path + 'apk';
-//               final savedDir = Directory(_localPath);
-//               savedDir.create(recursive: true).then((value) async {
-//                 String? _taskid = await FlutterDownloader.enqueue(
-//                   url: 'https://shop-audit.icu/pages/apk_page/build.apk',
-//                   fileName: 'smartConSol.apk',
-//                   savedDir: _localPath,
-//                   showNotification: true,
-//                   openFileFromNotification: true,
-//                 );
-//                 print(_taskid);
-//               });
-//             },
-//           ),
-//         ],
-//       );
-//     },
-//   );
-// }

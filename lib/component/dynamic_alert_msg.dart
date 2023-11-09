@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-Future<void> customAlertMsg(BuildContext context, String text) async
+Future<void> customAlertMsg(BuildContext context, String text)
 {
   return showDialog<void>(
     context: context,

@@ -1,15 +1,6 @@
-class AppLatLong
-{
-  final double latitude;
-  final double longitude;
+import 'package:yandex_mapkit/yandex_mapkit.dart';
 
-  const AppLatLong({
-    required this.latitude,
-    required this.longitude,
-  });
-}
-
-class MoscowLocation extends AppLatLong
+class MoscowLocation extends Point
 {
   const MoscowLocation({
     super.latitude = 55.7522200,
@@ -17,7 +8,7 @@ class MoscowLocation extends AppLatLong
   });
 }
 
-class BishkekLocation extends AppLatLong
+class BishkekLocation extends Point
 {
   const BishkekLocation({
     super.latitude = 42.882004,

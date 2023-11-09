@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart';
-import 'package:shop_audit/component/location_global.dart';
+import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/global/shop_points_for_job.dart';
 import 'package:shop_audit/main.dart';
 import 'package:sqflite/sqflite.dart';
@@ -31,6 +31,7 @@ class SocketHandler
   ValueNotifier<SocketState> socketState = ValueNotifier(SocketState.notInitialize);
   Database? _database;
   int _id = 0;
+  bool _isWaitResend = false;
 
   Function(bool isLogged)? isLoginFunc;
   Function()? _updateApp;
@@ -78,10 +79,10 @@ class SocketHandler
       }
     }
   }
-  //(int@userId,real@xCoord,real@yCoord,text@name,text@description,time without time zone@startHours,time without time zone@finishHours) AS INSERT INTO shop_audit_clear.shop(user_id,x,y,name,description,start_work_time,finish_work_time) VALUES  (@userId,@xCoord,@yCoord,@name,@description,@startHours,@finishHours)
+
   void addShop(String name, String desc)
   {
-    var temp = LocationHandler().currentLocation;
+    var temp = GlobalHandler.currentUserPoint;
     _sendMessage(text: 'newShop?userId=$globalUserId;description=$desc;name=$name;xCoord=${temp.latitude};yCoord=${temp.longitude}',reload:true);
   }
 
@@ -102,10 +103,12 @@ class SocketHandler
     var databasesPath = await getDatabasesPath();
     String path = join(databasesPath, 'reports.db');
     _database = await openDatabase(path, version: 1,
-        onCreate: (Database db, int version)async {
-      await db.execute('CREATE TABLE report (id INTEGER PRIMARY KEY autoincrement NOT NULL,photo_path TEXT, report_text TEXT, shop_id INTEGER NOT NULL,'
-          'user_id INTEGER NOT NULL, millisecs_since_epoch INTEGER NOT NULL)');
-    });
+        onCreate: (Database db, int version) async {
+          await db.execute('CREATE TABLE report (id INTEGER PRIMARY KEY autoincrement NOT NULL,photo_path TEXT, report_text TEXT, shop_id INTEGER NOT NULL,'
+              'user_id INTEGER NOT NULL, millisecs_since_epoch INTEGER NOT NULL)');
+          await db.execute('CREATE TABLE user_login (id INTEGER PRIMARY KEY autoincrement NOT NULL,photo_path TEXT, report_text TEXT, shop_id INTEGER NOT NULL,'
+              'user_id INTEGER NOT NULL, millisecs_since_epoch INTEGER NOT NULL)');
+        });
   }
 
   Future _createDbDump(List<String> files, String text, int shopId) async
@@ -118,20 +121,23 @@ class SocketHandler
   {
     var res = await _database?.rawQuery('SELECT id FROM report ORDER BY id DESC LIMIT 1');
     if(res != null){
-        return res[0]['id']! as int;
+      return res[0]['id']! as int;
     }
     return 0;
   }
 
   void checkLostReports() async
   {
-    var res = await _database?.rawQuery('SELECT * FROM report ORDER BY id');
+    var res = await _database?.rawQuery('SELECT * FROM report WHERE millisecs_since_epoch < ${DateTime.now().millisecondsSinceEpoch - 5*60*1000} ORDER BY id');
     if(res != null){
       for(final raw in res){
         _sendMessage(text:'checkReport?extId=${raw['id']};userId=${raw['user_id']};shopId=${raw['shop_id']}',reload:true);
       }
     }
-    Future.delayed(const Duration(minutes: 2),_reSendReports);
+    if(!_isWaitResend) {
+      _isWaitResend = true;
+      Future.delayed(const Duration(seconds: 30), _reSendReports);
+    }
   }
 
   void sendReport(List<String> files, String text, int shopId, {bool needCache = true, int extId=0})
@@ -141,7 +147,6 @@ class SocketHandler
       _createDbDump(files, text, shopId).then((value){
         getLastRawInt().then((value){
           ext = value;
-          print('current id in sqlite = $ext');
           _socket.write('id=10;reload=true;addReport?report=$text;${ext == 0 ? '' : 'extId=$ext;'}shopId=$shopId;userId=$globalUserId');
           for(int i=0;i<files.length;i++){
             if(i == 0) {
@@ -193,6 +198,7 @@ class SocketHandler
 
   void _reSendReports() async
   {
+    _isWaitResend = false;
     var res = await _database?.rawQuery('SELECT * FROM report ORDER BY id');
     if(res != null) {
       for (final raw in res) {
@@ -233,7 +239,7 @@ class SocketHandler
     }
   }
 
-  void _catchBuild(String text)
+  void _catchBuild(String text) async
   {
     print('catch get BUILD');
     var answer = text.split('\r');
@@ -245,7 +251,7 @@ class SocketHandler
       var temp = answer[i].split(';');
       if(categories.contains('build')){
         if(int.parse(temp[categories.indexOf('build')]) > versionApk){
-          _updateApp?.call();
+          await _updateApp?.call();
           return;
         }
       }

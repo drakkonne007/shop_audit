@@ -33,7 +33,6 @@ class DatabaseClient
     for(int i=0;i<columnNames.length;i++){
       map.putIfAbsent(columnNames[i].columnName, () => i);
     }
-    int t = 0;
     for (final row in result) {
       Point point = Point(
         latitude: row[map['x']!],

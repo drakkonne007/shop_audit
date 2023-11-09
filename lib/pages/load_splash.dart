@@ -2,6 +2,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shop_audit/component/dynamic_alert_msg.dart';
 import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/global/shop_points_for_job.dart';
@@ -55,11 +56,21 @@ class _LoadSplashState extends State<LoadSplash> {
     }else{
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
     }
+  }
 
+  Future _askRequiredPermission() async {
+    Map<Permission, PermissionStatus> statuses = await [
+      Permission.requestInstallPackages,
+      Permission.locationAlways,
+      Permission.locationWhenInUse,
+      Permission.location,
+      Permission.accessMediaLocation,
+    ].request();
   }
 
   Future<void> loadDB() async
   {
+    await _askRequiredPermission();
     String? login = mainShared?.getString('login');
     String? pwd = mainShared?.getString('pwd');
     if(!SocketHandler().isLoad) {
