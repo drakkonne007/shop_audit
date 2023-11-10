@@ -31,7 +31,7 @@ class SocketHandler
   ValueNotifier<SocketState> socketState = ValueNotifier(SocketState.notInitialize);
   Database? _database;
   int _id = 0;
-  bool _isWaitResend = false;
+  List<int> _rawBytes = [];
 
   Function(bool isLogged)? isLoginFunc;
   Function()? _updateApp;
@@ -88,7 +88,6 @@ class SocketHandler
 
   void getCurrentBuild(Function() update)
   {
-    print('send get BUILD');
     _updateApp = update;
     _sendMessage(text:'getCurrentBuild?version=$versionApk',reload:false);
   }
@@ -105,8 +104,6 @@ class SocketHandler
     _database = await openDatabase(path, version: 1,
         onCreate: (Database db, int version) async {
           await db.execute('CREATE TABLE report (id INTEGER PRIMARY KEY autoincrement NOT NULL,photo_path TEXT, report_text TEXT, shop_id INTEGER NOT NULL,'
-              'user_id INTEGER NOT NULL, millisecs_since_epoch INTEGER NOT NULL)');
-          await db.execute('CREATE TABLE user_login (id INTEGER PRIMARY KEY autoincrement NOT NULL,photo_path TEXT, report_text TEXT, shop_id INTEGER NOT NULL,'
               'user_id INTEGER NOT NULL, millisecs_since_epoch INTEGER NOT NULL)');
         });
   }
@@ -128,16 +125,17 @@ class SocketHandler
 
   void checkLostReports() async
   {
-    var res = await _database?.rawQuery('SELECT * FROM report WHERE millisecs_since_epoch < ${DateTime.now().millisecondsSinceEpoch - 5*60*1000} ORDER BY id');
+    if(GlobalHandler.isResendReports.value){
+      return;
+    }
+    GlobalHandler.isResendReports.value = true;
+    var res = await _database?.rawQuery('SELECT * FROM report ORDER BY id');
     if(res != null){
       for(final raw in res){
         _sendMessage(text:'checkReport?extId=${raw['id']};userId=${raw['user_id']};shopId=${raw['shop_id']}',reload:true);
       }
     }
-    if(!_isWaitResend) {
-      _isWaitResend = true;
-      Future.delayed(const Duration(seconds: 30), _reSendReports);
-    }
+    Future.delayed(const Duration(seconds: 30), _reSendReports);
   }
 
   void sendReport(List<String> files, String text, int shopId, {bool needCache = true, int extId=0})
@@ -170,13 +168,19 @@ class SocketHandler
   }
 
   void _dataRecive(data) async{
-    _buffer += utf8.decode(data);
-    if (_buffer.contains('\x17')) {
-      var answer = _buffer.split('\x17');
-      for (int i = 0; i < answer.length; i++) {
-        _answersHub(answer[i]);
+    _rawBytes.addAll(data);
+    try{
+      _buffer += utf8.decode(_rawBytes);
+      _rawBytes.clear();
+      if (_buffer.contains('\x17')) {
+        var answer = _buffer.split('\x17');
+        for (int i = 0; i < answer.length; i++) {
+          _answersHub(answer[i]);
+        }
+        _buffer = answer[answer.length - 1];
       }
-      _buffer = answer[answer.length - 1];
+    }catch(e){
+      print(e);
     }
   }
 
@@ -198,12 +202,11 @@ class SocketHandler
 
   void _reSendReports() async
   {
-    _isWaitResend = false;
     var res = await _database?.rawQuery('SELECT * FROM report ORDER BY id');
     if(res != null) {
       for (final raw in res) {
         DateTime dtime = DateTime.fromMillisecondsSinceEpoch(raw['millisecs_since_epoch'] as int);
-        if(dtime.difference(DateTime.now()).inMinutes.abs() > 5) {
+        if(dtime.difference(DateTime.now()).inMinutes.abs() > 3) {
           List<String> files = [];
           String? text = raw['photo_path'] as String?;
           if(text != null && text != ''){
@@ -214,6 +217,7 @@ class SocketHandler
         }
       }
     }
+    GlobalHandler.isResendReports.value = false;
   }
 
   void _answersHub(String text)
@@ -241,7 +245,6 @@ class SocketHandler
 
   void _catchBuild(String text) async
   {
-    print('catch get BUILD');
     var answer = text.split('\r');
     if (answer.length < 3) {
       return;

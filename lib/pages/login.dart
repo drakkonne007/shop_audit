@@ -40,8 +40,6 @@ class _LoginPageState extends State<LoginPage> {
     if(result == true){
       SocketHandler().loadShops(true);
       SocketHandler().getAims(false);
-      mainShared?.setString('pwd', passwordController.text);
-      mainShared?.setString('login', loginController.text);
       Navigator.of(context).pushNamedAndRemoveUntil('/mapScreen', (route) => false);
     }else{
       setState(() {
@@ -142,8 +140,11 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 20,),
               isLoading ? const CircularProgressIndicator() : ElevatedButton(onPressed: (){
                 if(loginController.text.isEmpty || passwordController.text.isEmpty){
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Заполните все поля'), duration: Duration(seconds: 2),));
                   return;
                 }
+                mainShared?.setString('pwd', passwordController.text);
+                mainShared?.setString('login', loginController.text);
                 setState(() {
                   isLoading = true;
                 });

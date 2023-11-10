@@ -69,7 +69,6 @@ class PointFromDbHandler
             filteredList.add(allList[i]);
           }
         }
-        return filteredList;
       }
       case SortType.Distance:
         var selfLocation = GlobalHandler.currentUserPoint;
@@ -83,7 +82,6 @@ class PointFromDbHandler
             filteredList.add(allList[i]);
           }
         }
-        return filteredList;
       case SortType.DateTimeCreated:
         for(int i=0;i<allList.length;i++){
           if(allList[i].dateTimeCreated.millisecondsSinceEpoch < DateTime.now().add(const Duration(days: -30)).millisecondsSinceEpoch){
@@ -95,7 +93,6 @@ class PointFromDbHandler
             filteredList.add(allList[i]);
           }
         }
-        return filteredList;
       case SortType.IsNeedReport:
         for(int i=0;i<allList.length;i++){
           if(allList[i].isWasReport){
@@ -107,7 +104,8 @@ class PointFromDbHandler
             filteredList.add(allList[i]);
           }
         }
-        return filteredList;
     }
+    print(filteredList.length);
+    return filteredList;
   }
 }

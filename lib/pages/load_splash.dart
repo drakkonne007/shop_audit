@@ -45,8 +45,6 @@ class _LoadSplashState extends State<LoadSplash> {
   {
     SocketHandler().isLoginFunc = null;
     if(result){
-      SocketHandler().loadShops(false);
-      SocketHandler().getAims(false);
       if(mainShared!.getInt('reportShopId') != null && mainShared?.getInt('reportShopId') != 0){
         customAlertChoice(context, 'Продолжить отчёт по магазину ${mainShared!.getString('shopReportName') ?? ''}?',getAnswerAboutContinueReport);
       }else{
@@ -60,7 +58,6 @@ class _LoadSplashState extends State<LoadSplash> {
 
   Future _askRequiredPermission() async {
     Map<Permission, PermissionStatus> statuses = await [
-      Permission.requestInstallPackages,
       Permission.locationAlways,
       Permission.locationWhenInUse,
       Permission.location,

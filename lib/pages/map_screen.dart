@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shop_audit/component/dynamic_alert_msg.dart';
 import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/global/socket_handler.dart';
@@ -32,14 +33,12 @@ class _MapScreenState extends State<MapScreen>
   Map<int,int> _shopIdAim = {}; //shopId userId
   late Timer _timerSelfLocation;
   late Timer _timerSetMyLocation;
-  late Timer _timerResendReport;
   int _lastAimId = -1;
   bool _isReconnect = false;
 
   @override
   void initState()
   {
-    _mapObjects = returnListMapObjects();
     PointFromDbHandler().pointsFromDb.addListener(_changeObjects);
     PointFromDbHandler().userActivePoints.addListener(_changeUsersAim);
     SocketHandler().socketState.addListener(checkReconnect);
@@ -50,20 +49,24 @@ class _MapScreenState extends State<MapScreen>
     _timerSetMyLocation = Timer.periodic(const Duration(seconds: 30),(timer){
       SocketHandler().sendMyPosition(GlobalHandler.currentUserPoint.latitude, GlobalHandler.currentUserPoint.longitude);
     });
-    _timerResendReport = Timer.periodic(const Duration(minutes: 1),(timer){
-      SocketHandler().checkLostReports();
-    });
     SocketHandler().getCurrentBuild(_downloadFile);
+    SocketHandler().loadShops(false);
+    SocketHandler().getAims(false);
     super.initState();
   }
 
   void reloadAll()
   {
-    SocketHandler().loadShops(true);
     setState(() {
-      _mapObjects = returnListMapObjects();
+      _mapObjects = {};
     });
-    _refreshActiveShops();
+    SocketHandler().loadShops(true);
+  }
+
+  Future _askRequiredPermission() async {
+    Map<Permission, PermissionStatus> statuses = await [
+      Permission.requestInstallPackages,
+    ].request();
   }
 
   void _downloadFile() async {
@@ -73,16 +76,15 @@ class _MapScreenState extends State<MapScreen>
     var res = await get(Uri.parse(myUrl));
     await file.writeAsBytes(res.bodyBytes);
     await customAlertMsg(context,'Скачано обновление, установите пожалуйста');
+    await _askRequiredPermission();
     var ss = await OpenFile.open('${dir[0].path}/SmartConSol.apk');
   }
 
   @override
   void dispose()
   {
-    _mapController?.dispose();
     _timerSelfLocation.cancel();
     _timerSetMyLocation.cancel();
-    _timerResendReport.cancel();
     PointFromDbHandler().pointsFromDb.removeListener(_changeObjects);
     PointFromDbHandler().userActivePoints.removeListener(_changeUsersAim);
     SocketHandler().socketState.removeListener(checkReconnect);
@@ -209,11 +211,27 @@ class _MapScreenState extends State<MapScreen>
                     Navigator.of(context).pushNamed('/newShop');
                   }, child: const Text('Добавить магазин')
                   ),
-                  ElevatedButton(onPressed: (){
-                    PointFromDbHandler().showAllPointByUser();
-                    PointFromDbHandler().pointsFromDb.notifyListeners();
-                  }, child: const Text('Сбросить отмеченные вручную')
-                  ),
+                  ValueListenableBuilder(valueListenable: GlobalHandler.isResendReports, builder: (context, value, child) {
+                    return ElevatedButton(
+                      style: value ? ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red[200],
+                      ) : null,
+                      onPressed: (){
+                        Scaffold.of(context).closeDrawer();
+                        if(value){
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ещё в процессе'), duration: Duration(seconds: 2)));
+                        }else {
+                          SocketHandler().checkLostReports();
+                          customAlertMsg(context,
+                              'Отчёты, которые Вы сделали больше 3-х минут назад повторно отправлятся. Не выключайте приложение в течении 30 секунд, пока кнопка не станет снова белой');
+                        }
+                      },
+                      child: const Text('Отправить отчёты повторно'),
+
+                    );
+                  }
+                  )
+                  ,
                   ElevatedButton(onPressed: (){
                     PointFromDbHandler().sortType = SortType.None;
                     PointFromDbHandler().showAllPointByUser();
@@ -256,19 +274,22 @@ class _MapScreenState extends State<MapScreen>
                                           await intent.launch();
                                         }
                                       },
-                                      child: Text('${allList[index].address}, ${allList[index].name}',
+                                      child: Text('${allList[index].name.trim()}. ID: ${allList[index].id}, ${allList[index].address.trim()}',
                                           style: TextStyle(
                                               color: getColor(allList[index].id)
                                           ))
                                   )),
                               IconButton(onPressed: (){
-                                _moveToCurrentLocation();
+                                _moveToCurrentLocation(newPoint: CameraPosition(target: Point(latitude: allList[index].x,longitude: allList[index].y)));
+                                Scaffold.of(context).closeDrawer();
                               }, icon: const Icon(Icons.gps_fixed))
                             ]);
                           }
                       )
                   ),
-                  IconButton(onPressed: (){logOut(context);}, icon: const Icon(Icons.logout_outlined))
+                  IconButton(onPressed: (){
+                    logOut(context);
+                  }, icon: const Icon(Icons.logout_outlined))
                 ]
             )
         ),
@@ -339,7 +360,6 @@ class _MapScreenState extends State<MapScreen>
   ClusterizedPlacemarkCollection _getClusterizedCollection({
     required List<PlacemarkMapObject> placemarks,
   }) {
-
     return ClusterizedPlacemarkCollection(
         mapId: const MapObjectId('clusterized-1'),
         placemarks: placemarks,
@@ -386,9 +406,9 @@ class _MapScreenState extends State<MapScreen>
   }
 
   /// Метод для показа текущей позиции
-  Future<void> _moveToCurrentLocation() async
+  Future<void> _moveToCurrentLocation({CameraPosition? newPoint}) async
   {
-    CameraPosition? point = await _mapController?.getUserCameraPosition();
+    CameraPosition? point = newPoint ?? await _mapController?.getUserCameraPosition();
     if(point == null){
       return;
     }
@@ -414,7 +434,7 @@ class _MapScreenState extends State<MapScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children:[
                 Text('Адрес: ${PointFromDbHandler().pointsFromDb.value[shopId]!.address}'),
-                // Text('Описание: ${PointFromDbHandler().pointsFromDb.value[shopId]!.description}'),
+                Text('ID: ${PointFromDbHandler().pointsFromDb.value[shopId]!.id}'),
                 // Text('Начало работы: ${PointFromDbHandler().pointsFromDb.value[shopId]!.startWorkingTime}'),
                 // Text('Конец работы:  ${PointFromDbHandler().pointsFromDb.value[shopId]!.endWorkingTime}'),
                 Text('Дата создания: ${presentDateTime(PointFromDbHandler().pointsFromDb.value[shopId]!.dateTimeCreated)}'),
