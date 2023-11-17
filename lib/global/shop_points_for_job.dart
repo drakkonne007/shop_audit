@@ -105,7 +105,6 @@ class PointFromDbHandler
           }
         }
     }
-    print(filteredList.length);
     return filteredList;
   }
 }

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart';
+import 'package:shop_audit/component/dynamic_alert_msg.dart';
 import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/global/shop_points_for_job.dart';
 import 'package:shop_audit/main.dart';
@@ -31,10 +32,12 @@ class SocketHandler
   ValueNotifier<SocketState> socketState = ValueNotifier(SocketState.notInitialize);
   Database? _database;
   int _id = 0;
-  List<int> _rawBytes = [];
+  final List<int> _rawBytes = [];
+  final Set<String> _currentIds = {};
 
   Function(bool isLogged)? isLoginFunc;
   Function()? _updateApp;
+  Function(List<String>)? resendShopList;
 
   int _getId()
   {
@@ -49,7 +52,7 @@ class SocketHandler
     try {
       isLoading = false;
       _socket = await Socket.connect('195.38.167.138', 9891);
-      // _socket = await Socket.connect('192.168.56.1', 9891);
+      // _socket = await Socket.connect('10.11.100.189', 9891);
       _socket.listen(_dataRecive,
           onDone: () {
             print('onDone');
@@ -129,11 +132,51 @@ class SocketHandler
       return;
     }
     GlobalHandler.isResendReports.value = true;
-    var res = await _database?.rawQuery('SELECT * FROM report ORDER BY id');
-    if(res != null){
-      for(final raw in res){
-        _sendMessage(text:'checkReport?extId=${raw['id']};userId=${raw['user_id']};shopId=${raw['shop_id']}',reload:true);
+    var res = await _database?.rawQuery('SELECT shop_id FROM report ORDER BY id');
+    if(res == null){
+      GlobalHandler.isResendReports.value = false;
+      resendShopList?.call([]);
+      return;
+    }
+    _currentIds.clear();
+    for(final raw in res){
+      _currentIds.add((raw['shop_id'].toString()));
+    }
+    _sendMessage(text:'checkShops?arrayIds={${_currentIds.join(',')}}',reload:true);
+  }
+
+  void _catchCheckShops(String text) async{
+    var answer = text.split('\r');
+    if (answer.length < 3) {
+      GlobalHandler.isResendReports.value = false;
+      resendShopList?.call([]);
+      await _database?.execute('DELETE FROM report');
+      return;
+    }
+    Set<String> intFromExternal = {};
+    var categories = answer[1].split(';');
+    for (int i = 2; i < answer.length; i++) {
+      var temp = answer[i].split(';');
+      if (categories.contains('id')) {
+        intFromExternal.add(temp[categories.indexOf('id')]);
       }
+    }
+    for(final ids in _currentIds){
+      if(!intFromExternal.contains(ids)){
+        await _database?.execute('DELETE FROM report WHERE shop_id=$ids');
+      }
+    }
+    _currentIds.clear();
+    var res = await _database?.rawQuery('SELECT * FROM report ORDER BY id');
+    if(res == null){
+      GlobalHandler.isResendReports.value = false;
+      resendShopList?.call([]);
+      return;
+    }
+    for(final raw in res) {
+      _sendMessage(
+          text: 'checkReport?extId=${raw['id']};userId=${raw['user_id']};shopId=${raw['shop_id']}',
+          reload: true);
     }
     Future.delayed(const Duration(seconds: 30), _reSendReports);
   }
@@ -190,12 +233,32 @@ class SocketHandler
     if (answer.length < 3) {
       return;
     }
+    Map<int,String> rawResFromExternalDb = {};
     var categories = answer[1].split(';');
     for (int i=2; i<answer.length; i++) {
       var temp = answer[i].split(';');
+      int id = 0;
       if(categories.contains('sqlite_ext_id')){
-        int id = int.parse(temp[categories.indexOf('sqlite_ext_id')]);
-        await _database?.execute('DELETE FROM report WHERE id=$id');
+        id = int.parse(temp[categories.indexOf('sqlite_ext_id')]);
+      }
+      if(categories.contains('photo_path')){
+        rawResFromExternalDb[id] = temp[categories.indexOf('photo_path')];
+      }else{
+        rawResFromExternalDb[id] = '';
+      }
+    }
+    var res = await _database?.rawQuery('SELECT id,photo_path FROM report ORDER BY id');
+    if(res == null){
+      return;
+    }
+    for(final raw in res){
+      if(rawResFromExternalDb.containsKey(raw['id'])){
+        int externalComas = rawResFromExternalDb[raw['id']]!.split(',').length;
+        String text = raw['photo_path'] as String;
+        int internalComas = text.split(',').length;
+        if(externalComas == internalComas){
+          await _database?.execute('DELETE FROM report WHERE id=${raw['id']}');
+        }
       }
     }
   }
@@ -203,6 +266,7 @@ class SocketHandler
   void _reSendReports() async
   {
     var res = await _database?.rawQuery('SELECT * FROM report ORDER BY id');
+    List<String> listShop = [];
     if(res != null) {
       for (final raw in res) {
         DateTime dtime = DateTime.fromMillisecondsSinceEpoch(raw['millisecs_since_epoch'] as int);
@@ -212,16 +276,21 @@ class SocketHandler
           if(text != null && text != ''){
             files = text.split(',');
           }
+          listShop.add(raw['shop_id'].toString());
           sendReport(files, raw['report_text'] as String,
               raw['shop_id'] as int, needCache: false, extId: raw['id'] as int);
         }
       }
     }
+    resendShopList?.call(listShop);
     GlobalHandler.isResendReports.value = false;
   }
 
   void _answersHub(String text)
   {
+    if(text.contains('checkShops')){
+      _catchCheckShops(text);
+    }
     if(text.contains('checkReport')){
       _catchCheckReport(text);
     }

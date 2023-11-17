@@ -35,6 +35,7 @@ class _MapScreenState extends State<MapScreen>
   late Timer _timerSetMyLocation;
   int _lastAimId = -1;
   bool _isReconnect = false;
+  int _mapIdCluster = 0;
 
   @override
   void initState()
@@ -52,6 +53,7 @@ class _MapScreenState extends State<MapScreen>
     SocketHandler().getCurrentBuild(_downloadFile);
     SocketHandler().loadShops(false);
     SocketHandler().getAims(false);
+    SocketHandler().resendShopList = _printResendedReports;
     super.initState();
   }
 
@@ -88,6 +90,7 @@ class _MapScreenState extends State<MapScreen>
     PointFromDbHandler().pointsFromDb.removeListener(_changeObjects);
     PointFromDbHandler().userActivePoints.removeListener(_changeUsersAim);
     SocketHandler().socketState.removeListener(checkReconnect);
+    SocketHandler().resendShopList = null;
     super.dispose();
   }
 
@@ -139,7 +142,7 @@ class _MapScreenState extends State<MapScreen>
     _sourcePoints = PointFromDbHandler().getFilteredPoints();
     for(var key in _sourcePoints)
     {
-      newList.putIfAbsent( key.id, () => createPlaceMark(key));
+      newList.putIfAbsent( key.id, () => _createPlaceMark(key));
     }
     return newList;
   }
@@ -152,7 +155,7 @@ class _MapScreenState extends State<MapScreen>
     });
   }
 
-  BitmapDescriptor getShopIcon(int shopId)
+  BitmapDescriptor _getShopIcon(int shopId)
   {
     if(_shopIdAim.containsValue(shopId)){
       if(_shopIdAim[globalUserId!] == shopId){
@@ -164,7 +167,7 @@ class _MapScreenState extends State<MapScreen>
     return BitmapDescriptor.fromAssetImage('assets/black_point.png');
   }
 
-  PlacemarkMapObject createPlaceMark(PointFromDb point)
+  PlacemarkMapObject _createPlaceMark(PointFromDb point)
   {
     final mapObject = PlacemarkMapObject(
         mapId: MapObjectId('${point.id}'),
@@ -177,7 +180,7 @@ class _MapScreenState extends State<MapScreen>
         consumeTapEvents: true,
         isDraggable: false,
         icon: PlacemarkIcon.single(PlacemarkIconStyle(
-            image: getShopIcon(point.id),
+            image: _getShopIcon(point.id),
             rotationType: RotationType.noRotation,
             scale: 2
         )),
@@ -191,6 +194,12 @@ class _MapScreenState extends State<MapScreen>
         )
     );
     return mapObject;
+  }
+
+  void _printResendedReports(List<String> shopIds)
+  {
+    String text = shopIds.isEmpty ? 'Нет неотправленных отчётов' : 'Отчеты отправлены по ID: $shopIds';
+    customAlertMsg(context, text);
   }
 
   @override
@@ -221,9 +230,9 @@ class _MapScreenState extends State<MapScreen>
                         if(value){
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ещё в процессе'), duration: Duration(seconds: 2)));
                         }else {
-                          SocketHandler().checkLostReports();
                           customAlertMsg(context,
                               'Отчёты, которые Вы сделали больше 3-х минут назад повторно отправлятся. Не выключайте приложение в течении 30 секунд, пока кнопка не станет снова белой');
+                          SocketHandler().checkLostReports();
                         }
                       },
                       child: const Text('Отправить отчёты повторно'),
@@ -276,7 +285,7 @@ class _MapScreenState extends State<MapScreen>
                                       },
                                       child: Text('${allList[index].name.trim()}. ID: ${allList[index].id}, ${allList[index].address.trim()}',
                                           style: TextStyle(
-                                              color: getColor(allList[index].id)
+                                              color: _getColor(allList[index].id)
                                           ))
                                   )),
                               IconButton(onPressed: (){
@@ -288,7 +297,7 @@ class _MapScreenState extends State<MapScreen>
                       )
                   ),
                   IconButton(onPressed: (){
-                    logOut(context);
+                    _logOut(context);
                   }, icon: const Icon(Icons.logout_outlined))
                 ]
             )
@@ -338,13 +347,34 @@ class _MapScreenState extends State<MapScreen>
                 },
               ),
               Align(
-                alignment: Alignment.bottomRight,
-                child: FloatingActionButton(
-                    child: const Icon(Icons.gps_fixed),
-                    onPressed: () async {
-                      await _moveToCurrentLocation();
-                    }
-                ),
+                  alignment: Alignment.bottomRight,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        FloatingActionButton(
+                            child: const Icon(Icons.zoom_in),
+                            onPressed: () async {
+                              _mapController?.moveCamera(CameraUpdate.zoomIn());
+                            }
+                        ),
+                        const SizedBox(height: 10,),
+                        FloatingActionButton(
+                            child: const Icon(Icons.zoom_out),
+                            onPressed: () async {
+                              _mapController?.moveCamera(CameraUpdate.zoomOut());
+                            }
+                        ),
+                        const SizedBox(height: 10,),
+                        FloatingActionButton(
+                          child: const Icon(Icons.gps_fixed),
+                          onPressed: () async {
+                            await _moveToCurrentLocation();
+                          }
+                      ),
+                        const SizedBox(height: 10,),
+                      ]
+                  )
               ),
               _isReconnect ? const Align(
                   alignment: Alignment.topCenter,
@@ -357,11 +387,16 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
+  int _getUUID()
+  {
+    return _mapIdCluster++;
+  }
+
   ClusterizedPlacemarkCollection _getClusterizedCollection({
     required List<PlacemarkMapObject> placemarks,
   }) {
     return ClusterizedPlacemarkCollection(
-        mapId: const MapObjectId('clusterized-1'),
+        mapId: MapObjectId(_getUUID().toString()),
         placemarks: placemarks,
         radius: 30,
         minZoom: 15,
@@ -398,7 +433,7 @@ class _MapScreenState extends State<MapScreen>
   /// Получение текущей геопозиции пользователя
   Future<void> _fetchCurrentLocation(bool isNeedMove) async
   {
-    var location = await _mapController!.getUserCameraPosition();
+    var location = await _mapController?.getUserCameraPosition();
     if(location == null){
       return;
     }
@@ -406,7 +441,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   /// Метод для показа текущей позиции
-  Future<void> _moveToCurrentLocation({CameraPosition? newPoint}) async
+  Future<void> _moveToCurrentLocation({CameraPosition? newPoint, double? zoom}) async
   {
     CameraPosition? point = newPoint ?? await _mapController?.getUserCameraPosition();
     if(point == null){
@@ -415,7 +450,7 @@ class _MapScreenState extends State<MapScreen>
     await _mapController?.moveCamera(
       animation: const MapAnimation(type: MapAnimationType.linear, duration: 1),
       CameraUpdate.newCameraPosition(
-        point.copyWith(zoom: 18),
+        point.copyWith(zoom: zoom ?? 18),
       ),
     );
   }
@@ -521,7 +556,7 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  Color getColor(int id)
+  Color _getColor(int id)
   {
     if(_shopIdAim.containsValue(id)){
       if(_shopIdAim[globalUserId!] == id){
@@ -534,7 +569,7 @@ class _MapScreenState extends State<MapScreen>
   }
 }
 
-Future<void> logOut(BuildContext context) async
+Future<void> _logOut(BuildContext context) async
 {
   return showDialog<void>(
     context: context,
