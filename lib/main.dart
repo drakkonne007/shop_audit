@@ -11,7 +11,7 @@ import 'package:shop_audit/global/database.dart';
 
 SharedPreferences? mainShared;
 int? globalUserId;
-const int versionApk = 3;
+const int versionApk = 5;
 
 String presentDateTime(DateTime dateTime, {bool seconds = false})
 {

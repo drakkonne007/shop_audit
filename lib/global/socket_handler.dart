@@ -1,7 +1,9 @@
 
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart';
 import 'package:shop_audit/component/dynamic_alert_msg.dart';
@@ -9,6 +11,16 @@ import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/global/shop_points_for_job.dart';
 import 'package:shop_audit/main.dart';
 import 'package:sqflite/sqflite.dart';
+
+class PreReport
+{
+  PreReport(this.files, this.text, this.shopId, this.extId, this.globalId);
+  List<String> files;
+  String text;
+  int shopId;
+  int extId;
+  int globalId;
+}
 
 enum SocketState
 {
@@ -178,36 +190,50 @@ class SocketHandler
           text: 'checkReport?extId=${raw['id']};userId=${raw['user_id']};shopId=${raw['shop_id']}',
           reload: true);
     }
-    Future.delayed(const Duration(seconds: 30), _reSendReports);
+    Future.delayed(const Duration(seconds: 30), ()async {
+      await _reSendReports();
+    });
   }
 
-  void sendReport(List<String> files, String text, int shopId, {bool needCache = true, int extId=0})
+  static void _newThreadSendReport(List<PreReport> preps) async
   {
-    int ext = extId;
-    if(needCache){
-      _createDbDump(files, text, shopId).then((value){
-        getLastRawInt().then((value){
-          ext = value;
-          _socket.write('id=10;reload=true;addReport?report=$text;${ext == 0 ? '' : 'extId=$ext;'}shopId=$shopId;userId=$globalUserId');
-          for(int i=0;i<files.length;i++){
+      Socket socket = await Socket.connect('195.38.167.138', 9891);
+      socket.write('auditor:12345\x17');
+      for(final prep in preps){
+        try {
+          socket.write('id=10;reload=true;addReport?report=${prep.text};${prep.extId == 0 ? ''
+              : 'extId=${prep.extId};'}shopId=${prep.shopId};userId=${prep.globalId}');
+          for(int i=0;i<prep.files.length;i++){
             if(i == 0) {
-              _socket.write(';photoPaths=');
+              socket.write(';photoPaths=');
             }
-            _socket.write(File(files[i]).readAsBytesSync());
+            File(prep.files[i]).existsSync() ? socket.write(File(prep.files[i]).readAsBytesSync()) : null;
           }
-          _socket.write('\x17');
-        });
-      });
-    }else{
-      _socket.write('id=10;reload=true;addReport?report=$text;${ext == 0 ? '' : 'extId=$ext;'}shopId=$shopId;userId=$globalUserId');
-      for(int i=0;i<files.length;i++){
-        if(i == 0) {
-          _socket.write(';photoPaths=');
+          socket.write('\x17');
+          await socket.flush();
+        }catch(e){
+          print('Oh no!Error with resend');
         }
-        _socket.write(File(files[i]).readAsBytesSync());
       }
-      _socket.write('\x17');
-    }
+      await socket.close();
+  }
+
+
+  void sendReport(List<String> files, String text, int shopId, {int extId=0})
+  {
+    _createDbDump(files, text, shopId).then((value){
+      getLastRawInt().then((value){
+        extId = value;
+        _socket.write('id=10;reload=true;addReport?report=$text;${extId == 0 ? '' : 'extId=$extId;'}shopId=$shopId;userId=$globalUserId');
+        for(int i=0;i<files.length;i++){
+          if(i == 0) {
+            _socket.write(';photoPaths=');
+          }
+          File(files[i]).existsSync() ?  _socket.write(File(files[i]).readAsBytesSync()) : null;
+        }
+        _socket.write('\x17');
+      });
+    });
   }
 
   void _dataRecive(data) async{
@@ -263,24 +289,26 @@ class SocketHandler
     }
   }
 
-  void _reSendReports() async
+  Future _reSendReports() async
   {
     var res = await _database?.rawQuery('SELECT * FROM report ORDER BY id');
     List<String> listShop = [];
     if(res != null) {
+      List<PreReport> tempReps = [];
       for (final raw in res) {
         DateTime dtime = DateTime.fromMillisecondsSinceEpoch(raw['millisecs_since_epoch'] as int);
-        if(dtime.difference(DateTime.now()).inMinutes.abs() > 3) {
+        if(dtime.difference(DateTime.now()).inMinutes.abs() > 3 || true) {
           List<String> files = [];
           String? text = raw['photo_path'] as String?;
           if(text != null && text != ''){
             files = text.split(',');
           }
           listShop.add(raw['shop_id'].toString());
-          sendReport(files, raw['report_text'] as String,
-              raw['shop_id'] as int, needCache: false, extId: raw['id'] as int);
+          var repStr = raw['report'] ?? '';
+          tempReps.add(PreReport(files, repStr as String, raw['shop_id'] as int, raw['id'] as int,globalUserId!));
         }
       }
+      compute(_newThreadSendReport, tempReps);
     }
     resendShopList?.call(listShop);
     GlobalHandler.isResendReports.value = false;

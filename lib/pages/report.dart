@@ -20,10 +20,6 @@ class ReportPage extends StatelessWidget
           actions: [
             IconButton(
               onPressed: (){
-                if(SocketHandler().socketState.value != SocketState.connected){
-                  customAlertMsg(context, 'Нет соединения с сервером! Подождите немного!');
-                  return;
-                }
                 List<String> paths = CameraHandler().imagePaths;
                 int toSend = GlobalHandler.activeShop;
                 SocketHandler().sendReport(paths,_textController.text, toSend);

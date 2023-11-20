@@ -310,10 +310,6 @@ class _MapScreenState extends State<MapScreen>
                 child: const Icon(Icons.refresh)),
             ElevatedButton(onPressed: () async{
               _refreshActiveShops();
-              if(SocketHandler().socketState.value != SocketState.connected){
-                customAlertMsg(context, 'Нет соединения с сервером! Подождите немного!');
-                return;
-              }
               switch(_activeShops.length){
                 case 0: {
                   await customAlertMsg(context,'Рядом нет магазина!');
@@ -349,7 +345,7 @@ class _MapScreenState extends State<MapScreen>
               Align(
                   alignment: Alignment.bottomRight,
                   child: Column(
-                    mainAxisSize: MainAxisSize.min,
+                      mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         FloatingActionButton(
@@ -367,11 +363,11 @@ class _MapScreenState extends State<MapScreen>
                         ),
                         const SizedBox(height: 10,),
                         FloatingActionButton(
-                          child: const Icon(Icons.gps_fixed),
-                          onPressed: () async {
-                            await _moveToCurrentLocation();
-                          }
-                      ),
+                            child: const Icon(Icons.gps_fixed),
+                            onPressed: () async {
+                              await _moveToCurrentLocation();
+                            }
+                        ),
                         const SizedBox(height: 10,),
                       ]
                   )
