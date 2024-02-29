@@ -9,7 +9,7 @@ import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shop_audit/component/dynamic_alert_msg.dart';
-import 'package:shop_audit/global/global_variants.dart';
+import 'package:shop_audit/component/internal_shop.dart';
 import 'package:shop_audit/global/socket_handler.dart';
 import 'package:shop_audit/main.dart';
 import 'package:shop_audit/pages/camera_handler.dart';
@@ -17,7 +17,8 @@ import 'package:yandex_mapkit/yandex_mapkit.dart';
 import 'package:shop_audit/global/shop_points_for_job.dart';
 import 'package:http/http.dart';
 
-class MapScreen extends StatefulWidget {
+class MapScreen extends StatefulWidget
+{
   const MapScreen({Key? key}) : super(key: key);
 
   @override
@@ -27,33 +28,30 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen>
 {
   YandexMapController? _mapController;
-  Map<int,PlacemarkMapObject> _mapObjects = {};
-  List<PointFromDb> _sourcePoints  = [];
+  Map<int, PlacemarkMapObject> _mapObjects = {};
+  List<InternalShop> _sourcePoints = [];
   final List<int> _activeShops = [];
-  Map<int,int> _shopIdAim = {}; //shopId userId
   late Timer _timerSelfLocation;
   late Timer _timerSetMyLocation;
-  int _lastAimId = -1;
   bool _isReconnect = false;
   int _mapIdCluster = 0;
 
   @override
   void initState()
   {
-    PointFromDbHandler().pointsFromDb.addListener(_changeObjects);
-    PointFromDbHandler().userActivePoints.addListener(_changeUsersAim);
-    SocketHandler().socketState.addListener(checkReconnect);
-    _shopIdAim = PointFromDbHandler().userActivePoints.value;
-    _timerSelfLocation = Timer.periodic(const Duration(seconds: 1),(timer) async{
-      _fetchCurrentLocation(false);
+    pointFromDbHandler.pointsFromDb.addListener(_changeObjects);
+    socketHandler.socketState.addListener(checkReconnect);
+    _timerSelfLocation =
+        Timer.periodic(const Duration(seconds: 1), (timer) async {
+          _fetchCurrentLocation();
+        });
+    _timerSetMyLocation = Timer.periodic(const Duration(seconds: 50), (timer) {
+      socketHandler.sendMyPosition(globalHandler.currentUserPoint.latitude,
+          globalHandler.currentUserPoint.longitude);
     });
-    _timerSetMyLocation = Timer.periodic(const Duration(seconds: 30),(timer){
-      SocketHandler().sendMyPosition(GlobalHandler.currentUserPoint.latitude, GlobalHandler.currentUserPoint.longitude);
-    });
-    SocketHandler().getCurrentBuild(_downloadFile);
-    SocketHandler().loadShops(false);
-    SocketHandler().getAims(false);
-    SocketHandler().resendShopList = _printResendedReports;
+    socketHandler.getCurrentBuild(_downloadFile);
+    socketHandler.loadShops(false);
+    socketHandler.resendShopList = _printResendedReports;
     super.initState();
   }
 
@@ -62,24 +60,26 @@ class _MapScreenState extends State<MapScreen>
     setState(() {
       _mapObjects = {};
     });
-    SocketHandler().loadShops(true);
+    socketHandler.loadShops(true);
   }
 
-  Future _askRequiredPermission() async {
-    Map<Permission, PermissionStatus> statuses = await [
+  Future _askRequiredPermission() async
+  {
+    await [
       Permission.requestInstallPackages,
     ].request();
   }
 
-  void _downloadFile() async {
+  void _downloadFile() async
+  {
     var dir = await getExternalCacheDirectories();
     File file = File('${dir![0].path}/SmartConSol.apk');
     String myUrl = 'http://shop-audit.icu/pages/apk_page/SmartConSol.apk';
     var res = await get(Uri.parse(myUrl));
     await file.writeAsBytes(res.bodyBytes);
-    await customAlertMsg(context,'Скачано обновление, установите пожалуйста');
+    await customAlertMsg(context, 'Скачано обновление, установите пожалуйста');
     await _askRequiredPermission();
-    var ss = await OpenFile.open('${dir[0].path}/SmartConSol.apk');
+    await OpenFile.open('${dir[0].path}/SmartConSol.apk');
   }
 
   @override
@@ -87,47 +87,44 @@ class _MapScreenState extends State<MapScreen>
   {
     _timerSelfLocation.cancel();
     _timerSetMyLocation.cancel();
-    PointFromDbHandler().pointsFromDb.removeListener(_changeObjects);
-    PointFromDbHandler().userActivePoints.removeListener(_changeUsersAim);
-    SocketHandler().socketState.removeListener(checkReconnect);
-    SocketHandler().resendShopList = null;
+    pointFromDbHandler.pointsFromDb.removeListener(_changeObjects);
+    socketHandler.socketState.removeListener(checkReconnect);
+    socketHandler.resendShopList = null;
     super.dispose();
   }
 
   void checkReconnect()
   {
-    if(SocketHandler().socketState.value == SocketState.disconnected && !_isReconnect){
+    if (socketHandler.socketState.value == SocketState.disconnected &&
+        !_isReconnect) {
       setState(() {
         _isReconnect = true;
       });
     }
-    if(SocketHandler().socketState.value == SocketState.connected && _isReconnect){
+    if (socketHandler.socketState.value == SocketState.connected &&
+        _isReconnect) {
       setState(() {
         _isReconnect = false;
       });
     }
   }
 
-  void _changeUsersAim()
-  {
-    setState(() {
-      _shopIdAim = PointFromDbHandler().userActivePoints.value;
-      SocketHandler().loadShops(true);
-    });
-  }
-
   void _refreshActiveShops()
   {
     _activeShops.clear();
-    var currLoc = GlobalHandler.currentUserPoint;
-    for(int i=0;i<_sourcePoints.length;i++){
-      if(((_sourcePoints[i].x - currLoc.latitude) * metersInOneAngle).abs() > 30){
+    var currLoc = globalHandler.currentUserPoint;
+    for (int i = 0; i < _sourcePoints.length; i++) {
+      if (((_sourcePoints[i].xCoord - currLoc.latitude) * metersInOneAngle).abs() >
+          30) {
         continue;
       }
-      if(((_sourcePoints[i].y - currLoc.longitude) * metersInOneAngle).abs() > 30){
+      if (((_sourcePoints[i].yCoord - currLoc.longitude) * metersInOneAngle).abs() >
+          30) {
         continue;
       }
-      if((pow(_sourcePoints[i].x - currLoc.latitude,2) + pow(_sourcePoints[i].y - currLoc.longitude,2)) *  metersInOneAngle > pow(30,2)){
+      if ((pow(_sourcePoints[i].xCoord - currLoc.latitude, 2) +
+          pow(_sourcePoints[i].yCoord - currLoc.longitude, 2)) * metersInOneAngle >
+          pow(30, 2)) {
         continue;
       }
       _activeShops.add(_sourcePoints[i].id);
@@ -135,44 +132,31 @@ class _MapScreenState extends State<MapScreen>
   }
 
 
-  Map<int,PlacemarkMapObject>  returnListMapObjects()
+  Map<int, PlacemarkMapObject> returnListMapObjects()
   {
-    Map<int,PlacemarkMapObject> newList = {};
+    Map<int, PlacemarkMapObject> newList = {};
     _sourcePoints.clear();
-    _sourcePoints = PointFromDbHandler().getFilteredPoints();
-    for(var key in _sourcePoints)
-    {
-      newList.putIfAbsent( key.id, () => _createPlaceMark(key));
+    _sourcePoints = pointFromDbHandler.getFilteredPoints();
+    for (var key in _sourcePoints) {
+      newList.putIfAbsent(key.id, () => _createPlaceMark(key));
     }
     return newList;
   }
 
   void _changeObjects()
   {
-    Map<int,PlacemarkMapObject> newList = returnListMapObjects();
+    Map<int, PlacemarkMapObject> newList = returnListMapObjects();
     setState(() {
       _mapObjects = newList;
     });
   }
 
-  BitmapDescriptor _getShopIcon(int shopId)
-  {
-    if(_shopIdAim.containsValue(shopId)){
-      if(_shopIdAim[globalUserId!] == shopId){
-        _lastAimId = shopId;
-        return BitmapDescriptor.fromAssetImage('assets/red_point.png');
-      }
-      return BitmapDescriptor.fromAssetImage('assets/yellow_point.png');
-    }
-    return BitmapDescriptor.fromAssetImage('assets/black_point.png');
-  }
-
-  PlacemarkMapObject _createPlaceMark(PointFromDb point)
+  PlacemarkMapObject _createPlaceMark(InternalShop point)
   {
     final mapObject = PlacemarkMapObject(
         mapId: MapObjectId('${point.id}'),
-        point: Point(latitude: point.x, longitude: point.y),
-        onTap: (PlacemarkMapObject mapObject, Point point) async{
+        point: Point(latitude: point.xCoord, longitude: point.yCoord),
+        onTap: (PlacemarkMapObject mapObject, Point point) async {
           await _shopInfo(context, mapObject);
         },
         opacity: 1,
@@ -180,13 +164,13 @@ class _MapScreenState extends State<MapScreen>
         consumeTapEvents: true,
         isDraggable: false,
         icon: PlacemarkIcon.single(PlacemarkIconStyle(
-            image: _getShopIcon(point.id),
+            image: BitmapDescriptor.fromAssetImage('assets/black_point.png'),
             rotationType: RotationType.noRotation,
             scale: 2
         )),
         text: PlacemarkText(
-            text: point.name,
-            style:const PlacemarkTextStyle(
+            text: point.shopName,
+            style: const PlacemarkTextStyle(
                 placement: TextStylePlacement.top,
                 color: Colors.amber,
                 outlineColor: Colors.black
@@ -198,105 +182,70 @@ class _MapScreenState extends State<MapScreen>
 
   void _printResendedReports(List<String> shopIds)
   {
-    String text = shopIds.isEmpty ? 'Нет неотправленных отчётов' : 'Отчеты отправлены по ID: $shopIds';
+    String text = shopIds.isEmpty
+        ? 'Нет неотправленных отчётов'
+        : 'Отчеты отправлены по ID: $shopIds';
     customAlertMsg(context, text);
   }
 
   @override
-  Widget build(BuildContext context) {
-    var allList = PointFromDbHandler().pointsFromDb.value.values.toList();
+  Widget build(BuildContext context)
+  {
+    var allList = pointFromDbHandler.pointsFromDb.value.values.toList();
     return Scaffold(
         drawerEnableOpenDragGesture: false,
         drawer: Drawer(
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children:[
-                  const SizedBox(height: 30,),
-                  ElevatedButton(onPressed: (){
-                    if(SocketHandler().socketState.value != SocketState.connected){
-                      customAlertMsg(context, 'Нет соединения с сервером! Подождите немного!');
-                      return;
-                    }
-                    Navigator.of(context).pushNamed('/newShop');
-                  }, child: const Text('Добавить магазин')
-                  ),
-                  ValueListenableBuilder(valueListenable: GlobalHandler.isResendReports, builder: (context, value, child) {
-                    return ElevatedButton(
-                      style: value ? ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red[200],
-                      ) : null,
-                      onPressed: (){
-                        Scaffold.of(context).closeDrawer();
-                        if(value){
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ещё в процессе'), duration: Duration(seconds: 2)));
-                        }else {
-                          customAlertMsg(context,
-                              'Отчёты, которые Вы сделали больше 3-х минут назад повторно отправлятся. Не выключайте приложение в течении 30 секунд, пока кнопка не станет снова белой');
-                          SocketHandler().checkLostReports();
-                        }
-                      },
-                      child: const Text('Отправить отчёты повторно'),
-
-                    );
-                  }
-                  )
-                  ,
-                  ElevatedButton(onPressed: (){
-                    PointFromDbHandler().sortType = SortType.None;
-                    PointFromDbHandler().showAllPointByUser();
-                    PointFromDbHandler().pointsFromDb.notifyListeners();
-                  }, child: const Text('Все')
-                  ),
-                  ElevatedButton(onPressed: (){
-                    PointFromDbHandler().sortType = SortType.Distance;
-                    PointFromDbHandler().showAllPointByUser();
-                    PointFromDbHandler().pointsFromDb.notifyListeners();
-                  }, child: const Text('Ближе 5 километров')
+                children: [
+                  const SizedBox(height: 35,),
+                  ElevatedButton(
+                    onPressed: () {
+                      sqlFliteDB.resendShops();
+                    },
+                    child: const Text('Отправить всё повторно'),
                   ),
                   Expanded(
                       child:
                       ListView.builder(
                           itemCount: allList.length,
                           itemBuilder: (BuildContext context, int index) {
-                            return Row(children:
-                            [
-                              Checkbox(
-                                value: PointFromDbHandler().isNeedShop(allList[index].id),
-                                onChanged: (val){
-                                  if(val == true){
-                                    PointFromDbHandler().pointsFromDb.value[allList[index].id]!.isNeedDrawByCustom = true;
-                                  }else{
-                                    PointFromDbHandler().pointsFromDb.value[allList[index].id]!.isNeedDrawByCustom = false;
-                                  }
-                                  PointFromDbHandler().pointsFromDb.notifyListeners();
-                                },
-                              ),
-                              Expanded(
-                                  child: TextButton(
-                                      onPressed: () async{
-                                        if (Platform.isAndroid) {
-                                          AndroidIntent intent = AndroidIntent(
-                                            action: 'action_view',
-                                            data: 'geo:${allList[index].x},${allList[index].y}',
-                                            package: 'com.google.android.apps.maps',
-                                          );
-                                          await intent.launch();
-                                        }
-                                      },
-                                      child: Text('${allList[index].name.trim()}. ID: ${allList[index].id}, ${allList[index].address.trim()}',
-                                          style: TextStyle(
-                                              color: _getColor(allList[index].id)
+                            return Row(
+                                children:[
+                                  Image.asset(allList[index].photoMap['externalPhoto']!, width: 50,height: 50, fit: BoxFit.contain,),
+                                  Expanded(
+                                      child: TextButton(
+                                          onPressed:(){
+                                            globalHandler.activeShopId = allList[index].id;
+                                            Navigator.of(context).pushNamed('/shopPage');
+                                          },
+                                          child: Text(allList[index].shopName.trim(),
+                                              style: const TextStyle(
+                                                  color: Colors.black)
                                           ))
-                                  )),
-                              IconButton(onPressed: (){
-                                _moveToCurrentLocation(newPoint: CameraPosition(target: Point(latitude: allList[index].x,longitude: allList[index].y)));
-                                Scaffold.of(context).closeDrawer();
-                              }, icon: const Icon(Icons.gps_fixed))
-                            ]);
+                                  ),
+                                  IconButton(onPressed: (){
+                                    if (Platform.isAndroid) {
+                                      AndroidIntent intent = AndroidIntent(
+                                        action: 'action_view',
+                                        data: 'geo:${allList[index]
+                                            .xCoord},${allList[index].yCoord}',
+                                        package: 'com.google.android.apps.maps',
+                                      );
+                                      intent.launch();
+                                    }
+                                  }, icon: const Icon(Icons.map)),
+                                  IconButton(onPressed: () {
+                                    _moveToCurrentLocation(newPoint: CameraPosition(
+                                        target: Point(latitude: allList[index].xCoord,
+                                            longitude: allList[index].yCoord)));
+                                    Scaffold.of(context).closeDrawer();
+                                  }, icon: const Icon(Icons.gps_fixed))
+                                ]);
                           }
                       )
                   ),
-                  IconButton(onPressed: (){
+                  IconButton(onPressed: () {
                     _logOut(context);
                   }, icon: const Icon(Icons.logout_outlined))
                 ]
@@ -304,43 +253,71 @@ class _MapScreenState extends State<MapScreen>
         ),
         appBar: AppBar(
           actions: [
-            ElevatedButton(onPressed: (){
-              reloadAll();
-            },
+            ValueListenableBuilder(valueListenable: sqlFliteDB.hasReports, builder: (context, value, child) {
+              return Text('$value отчётов из ');
+            }),
+            ValueListenableBuilder(valueListenable: sqlFliteDB.allShops, builder: (context, value, child) {
+              return Text('$value');
+            }),
+            ElevatedButton(onPressed: () {},
                 child: const Icon(Icons.refresh)),
-            ElevatedButton(onPressed: () async{
-              _refreshActiveShops();
-              switch(_activeShops.length){
-                case 0: {
-                  await customAlertMsg(context,'Рядом нет магазина!');
-                }
-                break;
-                case 1: {
-                  GlobalHandler.activeShop = _activeShops[0];
-                  GlobalHandler.activeShopName = PointFromDbHandler().pointsFromDb.value[_activeShops[0]]!.name;
-                  CameraHandler().imagePaths = [];
-                  Navigator.of(context).pushNamed('/report');
-                }
-                break;
-                default:{
-                  _variantsShops(context);
-                }
-                break;
-              }
-            },
-                child: const Text('отправить отчёт'))
+            // ElevatedButton(onPressed: () async {
+            //   _refreshActiveShops();
+            //   switch (_activeShops.length) {
+            //     case 0:
+            //       {
+            //         // await customAlertMsg(context,'Рядом нет магазина!');
+            //         globalHandler.activeShop = _activeShops[0];
+            //         globalHandler.activeShopName =
+            //             pointFromDbHandler.pointsFromDb
+            //                 .value[_activeShops[0]]!.shopName;
+            //         CameraHandler().imagePaths = [];
+            //         Navigator.of(context).pushNamed('/report');
+            //       }
+            //       break;
+            //     case 1:
+            //       {
+            //         globalHandler.activeShop = _activeShops[0];
+            //         globalHandler.activeShopName =
+            //             pointFromDbHandler.pointsFromDb
+            //                 .value[_activeShops[0]]!.shopName;
+            //         CameraHandler().imagePaths = [];
+            //         Navigator.of(context).pushNamed('/report');
+            //       }
+            //       break;
+            //     default:
+            //       {
+            //         _variantsShops(context);
+            //       }
+            //       break;
+            //   }
+            // },
+            //     child: const Text('отправить отчёт'))
           ],
         ),
         body: Stack(
             fit: StackFit.passthrough,
-            children:[
+            children: [
               YandexMap(
+                mode2DEnabled: true,
                 tiltGesturesEnabled: false,
-                mapObjects: [_getClusterizedCollection(placemarks: _mapObjects.values.toList())]  ,
+                mapObjects: [
+                  _getClusterizedCollection(
+                      placemarks: _mapObjects.values.toList())
+                ],
                 onMapCreated: (controller) {
                   _mapController = controller;
                   _mapController?.toggleUserLayer(visible: true);
                 },
+              ),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: FloatingActionButton(
+                    child: const Icon(Icons.add_shopping_cart),
+                    onPressed: () async {
+                      Navigator.of(context).pushNamed('/newShop');
+                    }
+                ),
               ),
               Align(
                   alignment: Alignment.bottomRight,
@@ -358,7 +335,8 @@ class _MapScreenState extends State<MapScreen>
                         FloatingActionButton(
                             child: const Icon(Icons.zoom_out),
                             onPressed: () async {
-                              _mapController?.moveCamera(CameraUpdate.zoomOut());
+                              _mapController?.moveCamera(
+                                  CameraUpdate.zoomOut());
                             }
                         ),
                         const SizedBox(height: 10,),
@@ -375,7 +353,10 @@ class _MapScreenState extends State<MapScreen>
               _isReconnect ? const Align(
                   alignment: Alignment.topCenter,
                   child: Text('____Обрыв сети_____',
-                    style: TextStyle(color: Colors.red, fontSize: 25, fontWeight: FontWeight.bold,backgroundColor: Colors.black),
+                    style: TextStyle(color: Colors.red,
+                        fontSize: 25,
+                        fontWeight: FontWeight.bold,
+                        backgroundColor: Colors.transparent),
                   )
               ) : Container()
             ]
@@ -388,9 +369,9 @@ class _MapScreenState extends State<MapScreen>
     return _mapIdCluster++;
   }
 
-  ClusterizedPlacemarkCollection _getClusterizedCollection({
-    required List<PlacemarkMapObject> placemarks,
-  }) {
+  ClusterizedPlacemarkCollection _getClusterizedCollection(
+      {required List<PlacemarkMapObject> placemarks})
+  {
     return ClusterizedPlacemarkCollection(
         mapId: MapObjectId(_getUUID().toString()),
         placemarks: placemarks,
@@ -401,7 +382,8 @@ class _MapScreenState extends State<MapScreen>
           return cluster.copyWith(
             appearance: cluster.appearance.copyWith(
               opacity: 1,
-              text: PlacemarkText(text: count.toString(), style: PlacemarkTextStyle(color: Colors.blue[900], size: 16)),
+              text: PlacemarkText(text: count.toString(),
+                  style: PlacemarkTextStyle(color: Colors.blue[900], size: 16)),
               icon: PlacemarkIcon.single(
                 PlacemarkIconStyle(
                     image: BitmapDescriptor.fromAssetImage(
@@ -427,20 +409,22 @@ class _MapScreenState extends State<MapScreen>
   }
 
   /// Получение текущей геопозиции пользователя
-  Future<void> _fetchCurrentLocation(bool isNeedMove) async
+  Future<void> _fetchCurrentLocation() async
   {
     var location = await _mapController?.getUserCameraPosition();
-    if(location == null){
+    if (location == null) {
       return;
     }
-    GlobalHandler.currentUserPoint = location.target;
+    globalHandler.currentUserPoint = location.target;
   }
 
   /// Метод для показа текущей позиции
-  Future<void> _moveToCurrentLocation({CameraPosition? newPoint, double? zoom}) async
+  Future<void> _moveToCurrentLocation(
+      {CameraPosition? newPoint, double? zoom}) async
   {
-    CameraPosition? point = newPoint ?? await _mapController?.getUserCameraPosition();
-    if(point == null){
+    CameraPosition? point = newPoint ??
+        await _mapController?.getUserCameraPosition();
+    if (point == null) {
       return;
     }
     await _mapController?.moveCamera(
@@ -451,59 +435,35 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  Future<void> _shopInfo(BuildContext context,PlacemarkMapObject mapObject)
+  Future<void> _shopInfo(BuildContext context, PlacemarkMapObject mapObject)
   {
     int shopId = int.parse(mapObject.mapId.value);
     return showDialog<void>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title:  Text(PointFromDbHandler().pointsFromDb.value[shopId]!.name),
-          content:  Column(
+          title: Text(pointFromDbHandler.pointsFromDb.value[shopId]!.shopName),
+          content: Column(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children:[
-                Text('Адрес: ${PointFromDbHandler().pointsFromDb.value[shopId]!.address}'),
-                Text('ID: ${PointFromDbHandler().pointsFromDb.value[shopId]!.id}'),
-                // Text('Начало работы: ${PointFromDbHandler().pointsFromDb.value[shopId]!.startWorkingTime}'),
-                // Text('Конец работы:  ${PointFromDbHandler().pointsFromDb.value[shopId]!.endWorkingTime}'),
-                Text('Дата создания: ${presentDateTime(PointFromDbHandler().pointsFromDb.value[shopId]!.dateTimeCreated)}'),
+              children: [
+                Text('Адрес: ${pointFromDbHandler.pointsFromDb.value[shopId]!
+                    .address}'),
+                Text('ID: ${pointFromDbHandler.pointsFromDb.value[shopId]!
+                    .id}'),
+                // Text('Дата создания: ${presentDateTime(
+                //     pointFromDbHandler.pointsFromDb.value[shopId]!
+                //         .dateTimeCreated)}'),
               ]
           ),
           actions: <Widget>[
             TextButton(
               style: TextButton.styleFrom(
-                textStyle: Theme.of(context).textTheme.labelLarge,
-              ),
-              child: const Text('Отслеживать'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                if(PointFromDbHandler().userActivePoints.value.containsValue(shopId)){
-                  return;
-                }
-                setState(() {
-                  _mapObjects[shopId] = _mapObjects[shopId]!.copyWith(icon: PlacemarkIcon.single(PlacemarkIconStyle(
-                      image: BitmapDescriptor.fromAssetImage('assets/red_point.png'),
-                      rotationType: RotationType.noRotation,
-                      scale: 2)));
-                  SocketHandler().updateCurrentAim(mapObject.mapId.value);
-                  if(_lastAimId != -1){
-                    _mapObjects[_lastAimId] = _mapObjects[_lastAimId]!.copyWith(
-                        icon: PlacemarkIcon.single(PlacemarkIconStyle(
-                            image: BitmapDescriptor.fromAssetImage(
-                                'assets/black_point.png'),
-                            rotationType: RotationType.noRotation,
-                            scale: 2)));
-                  }
-                  _lastAimId = shopId;
-                  SocketHandler().getAims(true);
-                });
-              },
-            ),
-            TextButton(
-              style: TextButton.styleFrom(
-                textStyle: Theme.of(context).textTheme.labelLarge,
+                textStyle: Theme
+                    .of(context)
+                    .textTheme
+                    .labelLarge,
               ),
               child: const Text('Ок'),
               onPressed: () {
@@ -516,85 +476,44 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  Future<void> _variantsShops(BuildContext context)
+  Future<void> _logOut(BuildContext context) async
   {
-    List<int> temp = List.unmodifiable(_activeShops);
     return showDialog<void>(
-      //PointFromDbHandler().activeShop = _activeShops[0];
       context: context,
       builder: (BuildContext context) {
-        return Scaffold(
-          appBar: AppBar(),
-          body: Column(
-              children: [
-                Expanded(
-                    child:ListView.separated(
-                        separatorBuilder: (BuildContext context, int index) => const Divider(),
-                        itemCount: temp.length,
-                        itemBuilder: (BuildContext context, int index){
-                          return ElevatedButton(onPressed: (){
-                            GlobalHandler.activeShop = temp[index];
-                            GlobalHandler.activeShopName = PointFromDbHandler().pointsFromDb.value[temp[index]]!.name;
-                            CameraHandler().imagePaths = [];
-                            Navigator.of(context).pushNamed('/report');
-                          }, child: Text( PointFromDbHandler().pointsFromDb.value[temp[index]]!.name));
-                        }
-                    )
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(onPressed: (){
-                  Navigator.of(context).pop();
-                }, child: const Text('Отмена'))
-              ]
-          ),
+        return AlertDialog(
+          title: const Text('Выйти из аккаунта?'),
+          actions: <Widget>[
+            TextButton(
+              style: TextButton.styleFrom(
+                textStyle: Theme
+                    .of(context)
+                    .textTheme
+                    .labelLarge,
+              ),
+              child: const Text('Ок'),
+              onPressed: () {
+                mainShared?.setString('login', '');
+                mainShared?.setString('pwd', '');
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                    '/login', (route) => false);
+              },
+            ),
+            TextButton(
+              style: TextButton.styleFrom(
+                textStyle: Theme
+                    .of(context)
+                    .textTheme
+                    .labelLarge,
+              ),
+              child: const Text('Нет'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
         );
       },
     );
   }
-
-  Color _getColor(int id)
-  {
-    if(_shopIdAim.containsValue(id)){
-      if(_shopIdAim[globalUserId!] == id){
-        return Colors.red;
-      }else{
-        return Colors.yellow;
-      }
-    }
-    return Colors.black;
-  }
-}
-
-Future<void> _logOut(BuildContext context) async
-{
-  return showDialog<void>(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title:  const Text('Выйти из аккаунта?'),
-        actions: <Widget>[
-          TextButton(
-            style: TextButton.styleFrom(
-              textStyle: Theme.of(context).textTheme.labelLarge,
-            ),
-            child: const Text('Ок'),
-            onPressed: () {
-              mainShared?.setString('login','');
-              mainShared?.setString('pwd','');
-              Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-            },
-          ),
-          TextButton(
-            style: TextButton.styleFrom(
-              textStyle: Theme.of(context).textTheme.labelLarge,
-            ),
-            child: const Text('Нет'),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
-      );
-    },
-  );
 }

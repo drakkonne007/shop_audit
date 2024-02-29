@@ -22,35 +22,12 @@ class _LoadSplashState extends State<LoadSplash> {
   bool isConnect = true;
   bool isProcessing = true;
 
-  void getAnswerAboutContinueReport(bool isNeed)
-  {
-    if(isNeed){
-        GlobalHandler.activeShop = mainShared!.getInt('reportShopId') ?? 0;
-        GlobalHandler.activeShopName = mainShared!.getString('shopReportName') ?? '';
-        if(mainShared!.getStringList('photos') != null){
-          CameraHandler().imagePaths.addAll(mainShared!.getStringList('photos') ?? []);
-        }
-        Navigator.of(context).pushNamedAndRemoveUntil('/mapScreen', (route) => false);
-        Navigator.of(context).pushNamed('/report');
-    }else{
-      mainShared!.setInt('reportShopId', 0);
-      mainShared!.setStringList('photos', []);
-      mainShared!.setString('shopReportName', '');
-      Navigator.of(context).pushNamedAndRemoveUntil(
-          '/mapScreen', (route) => false);
-    }
-  }
-
   void catchAccess(bool result)
   {
-    SocketHandler().isLoginFunc = null;
+    socketHandler.isLoginFunc = null;
     if(result){
-      if(mainShared!.getInt('reportShopId') != null && mainShared?.getInt('reportShopId') != 0){
-        customAlertChoice(context, 'Продолжить отчёт по магазину ${mainShared!.getString('shopReportName') ?? ''}?',getAnswerAboutContinueReport);
-      }else{
-        Navigator.of(context).pushNamedAndRemoveUntil(
-            '/mapScreen', (route) => false);
-      }
+      Navigator.of(context).pushNamedAndRemoveUntil(
+          '/mapScreen', (route) => false);
     }else{
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
     }
@@ -70,13 +47,13 @@ class _LoadSplashState extends State<LoadSplash> {
     await _askRequiredPermission();
     String? login = mainShared?.getString('login');
     String? pwd = mainShared?.getString('pwd');
-    if(!SocketHandler().isLoad) {
-      await SocketHandler().init();
+    if(!socketHandler.isLoad) {
+      await socketHandler.init();
     }
-    if(SocketHandler().isLoad) {
+    if(socketHandler.isLoad) {
       if(login != null && pwd != null){
-        SocketHandler().isLoginFunc = catchAccess;
-        SocketHandler().checkAccess(login, pwd);
+        socketHandler.isLoginFunc = catchAccess;
+        socketHandler.checkAccess(login, pwd);
       }else{
         Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
       }

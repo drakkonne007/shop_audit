@@ -1,6 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shop_audit/global/global_variants.dart';
+import 'package:shop_audit/global/internalDatabase.dart';
+import 'package:shop_audit/global/shop_points_for_job.dart';
+import 'package:shop_audit/global/socket_handler.dart';
 import 'package:shop_audit/pages/load_splash.dart';
 import 'package:shop_audit/pages/login.dart';
 import 'package:shop_audit/pages/new_shop.dart';
@@ -10,8 +14,11 @@ import 'package:shop_audit/pages/map_screen.dart';
 import 'package:shop_audit/global/database.dart';
 
 SharedPreferences? mainShared;
-int? globalUserId;
 const int versionApk = 5;
+GlobalHandler globalHandler = GlobalHandler();
+PointFromDbHandler pointFromDbHandler = PointFromDbHandler();
+SocketHandler socketHandler = SocketHandler();
+SqlFliteDB sqlFliteDB = SqlFliteDB();
 
 String presentDateTime(DateTime dateTime, {bool seconds = false})
 {

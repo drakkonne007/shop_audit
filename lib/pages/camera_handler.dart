@@ -9,7 +9,6 @@ class CameraHandler
   CameraHandler._internal();
 
   List<CameraDescription>? cameras;
-  List<String> imagePaths = [];
 
   Future<void> loadCameras() async
   {

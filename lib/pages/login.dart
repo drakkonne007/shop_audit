@@ -24,13 +24,13 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     _isCorrect = true;
-    SocketHandler().isLoginFunc = catchAccess;
+    socketHandler.isLoginFunc = catchAccess;
     super.initState();
   }
 
   @override
   void dispose() {
-    SocketHandler().isLoginFunc = null;
+    socketHandler.isLoginFunc = null;
     super.dispose();
   }
 
@@ -38,8 +38,7 @@ class _LoginPageState extends State<LoginPage> {
   {
     _isCorrect = true;
     if(result == true){
-      SocketHandler().loadShops(true);
-      SocketHandler().getAims(false);
+      socketHandler.loadShops(true);
       Navigator.of(context).pushNamedAndRemoveUntil('/mapScreen', (route) => false);
     }else{
       setState(() {
@@ -148,7 +147,7 @@ class _LoginPageState extends State<LoginPage> {
                 setState(() {
                   isLoading = true;
                 });
-                SocketHandler().checkAccess(loginController.text, passwordController.text);
+                socketHandler.checkAccess(loginController.text, passwordController.text);
               },
                   child: Text('Войти')
               ),

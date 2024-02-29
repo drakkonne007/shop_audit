@@ -3,14 +3,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:js_interop';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart';
-import 'package:shop_audit/component/dynamic_alert_msg.dart';
+import 'package:shop_audit/component/internal_shop.dart';
 import 'package:shop_audit/global/global_variants.dart';
-import 'package:shop_audit/global/shop_points_for_job.dart';
 import 'package:shop_audit/main.dart';
-import 'package:sqflite/sqflite.dart';
 
 class PreReport
 {
@@ -31,21 +29,13 @@ enum SocketState
 
 class SocketHandler
 {
-  static final SocketHandler _socketHandler = SocketHandler._internal();
-  factory SocketHandler() {
-    return _socketHandler;
-  }
-  SocketHandler._internal();
   late Socket _socket;
   String _buffer = '';
   bool isLoad = false;
-  DateTime? _lastAimUpdate;
   bool isLoading = true;
   ValueNotifier<SocketState> socketState = ValueNotifier(SocketState.notInitialize);
-  Database? _database;
   int _id = 0;
   final List<int> _rawBytes = [];
-  final Set<String> _currentIds = {};
 
   Function(bool isLogged)? isLoginFunc;
   Function()? _updateApp;
@@ -58,9 +48,6 @@ class SocketHandler
 
   Future<void> init() async
   {
-    if(_database == null){
-      openDb();
-    }
     try {
       isLoading = false;
       _socket = await Socket.connect('195.38.167.138', 9891);
@@ -95,129 +82,190 @@ class SocketHandler
     }
   }
 
-  void addShop(String name, String desc)
-  {
-    var temp = GlobalHandler.currentUserPoint;
-    _sendMessage(text: 'newShop?userId=$globalUserId;description=$desc;name=$name;xCoord=${temp.latitude};yCoord=${temp.longitude}',reload:true);
+  void _dataRecive(data) async{
+    _rawBytes.addAll(data);
+    try{
+      _buffer += utf8.decode(_rawBytes);
+      _rawBytes.clear();
+      if (_buffer.contains('\x17')) {
+        var answer = _buffer.split('\x17');
+        for (int i = 0; i < answer.length; i++) {
+          _answersHub(answer[i]);
+        }
+        _buffer = answer[answer.length - 1];
+      }
+    }catch(e){
+      print(e);
+    }
   }
+
+  void _answersHub(String text)
+  {
+    if(text.contains('checkShop')){
+      _catchCheckShops(text);
+    }
+    if(text.contains('checkReport')){
+      _catchCheckReport(text);
+    }
+    if(text.contains('loadShops') || text.contains('10shops')){
+      _getShopPoints(text);
+      return;
+    }
+    if(text.contains('login')){
+      _catchAccess(text);
+      return;
+    }
+    if(text.contains('getCurrentBuild')){
+      _catchBuild(text);
+      return;
+    }
+  }
+
+  //ВОПРОСЫ
 
   void getCurrentBuild(Function() update)
   {
     _updateApp = update;
-    _sendMessage(text:'getCurrentBuild?version=$versionApk',reload:false);
+    _sendMessage(text:'getCurrentBuild',reload:false);
   }
 
   void sendMyPosition(double xCoord,double yCoord)
   {
-    _sendMessage(text:'setCurrPosition?auditorId=$globalUserId;xCoord=$xCoord;yCoord=$yCoord',reload:true);
+    _sendMessage(text:'setCurrPosition?auditorId=${globalHandler.userId};xCoord=$xCoord;yCoord=$yCoord;dtime=${DateTime.now().millisecondsSinceEpoch / 1000}',reload:true);
   }
 
-  void openDb() async
+  void sendShop(List<InternalShop> shops)
   {
-    var databasesPath = await getDatabasesPath();
-    String path = join(databasesPath, 'reports.db');
-    _database = await openDatabase(path, version: 1,
-        onCreate: (Database db, int version) async {
-          await db.execute('CREATE TABLE report (id INTEGER PRIMARY KEY autoincrement NOT NULL,photo_path TEXT, report_text TEXT, shop_id INTEGER NOT NULL,'
-              'user_id INTEGER NOT NULL, millisecs_since_epoch INTEGER NOT NULL)');
-        });
-  }
-
-  Future _createDbDump(List<String> files, String text, int shopId) async
-  {
-    await _database?.execute('INSERT INTO report(photo_path, report_text, shop_id, user_id, millisecs_since_epoch) VALUES '
-        '("${files.join(',')}", "$text", $shopId, $globalUserId, ${DateTime.now().millisecondsSinceEpoch})');
-  }
-
-  Future<int> getLastRawInt() async
-  {
-    var res = await _database?.rawQuery('SELECT id FROM report ORDER BY id DESC LIMIT 1');
-    if(res != null){
-      return res[0]['id']! as int;
-    }
-    return 0;
-  }
-
-  void checkLostReports() async
-  {
-    if(GlobalHandler.isResendReports.value){
-      return;
-    }
-    GlobalHandler.isResendReports.value = true;
-    var res = await _database?.rawQuery('SELECT shop_id FROM report ORDER BY id');
-    if(res == null){
-      GlobalHandler.isResendReports.value = false;
-      resendShopList?.call([]);
-      return;
-    }
-    _currentIds.clear();
-    for(final raw in res){
-      _currentIds.add((raw['shop_id'].toString()));
-    }
-    _sendMessage(text:'checkShops?arrayIds={${_currentIds.join(',')}}',reload:true);
-  }
-
-  void _catchCheckShops(String text) async{
-    var answer = text.split('\r');
-    if (answer.length < 3) {
-      GlobalHandler.isResendReports.value = false;
-      resendShopList?.call([]);
-      await _database?.execute('DELETE FROM report');
-      return;
-    }
-    Set<String> intFromExternal = {};
-    var categories = answer[1].split(';');
-    for (int i = 2; i < answer.length; i++) {
-      var temp = answer[i].split(';');
-      if (categories.contains('id')) {
-        intFromExternal.add(temp[categories.indexOf('id')]);
-      }
-    }
-    for(final ids in _currentIds){
-      if(!intFromExternal.contains(ids)){
-        await _database?.execute('DELETE FROM report WHERE shop_id=$ids');
-      }
-    }
-    _currentIds.clear();
-    var res = await _database?.rawQuery('SELECT * FROM report ORDER BY id');
-    if(res == null){
-      GlobalHandler.isResendReports.value = false;
-      resendShopList?.call([]);
-      return;
-    }
-    for(final raw in res) {
-      _sendMessage(
-          text: 'checkReport?extId=${raw['id']};userId=${raw['user_id']};shopId=${raw['shop_id']}',
-          reload: true);
-    }
-    Future.delayed(const Duration(seconds: 30), ()async {
-      await _reSendReports();
+    compute(_newThreadSendReport, shops);
+    Future.delayed(const Duration(minutes: 1), () {
+      _checkLostReports(sqlFliteDB.getNonHasReport());
     });
   }
 
-  static void _newThreadSendReport(List<PreReport> preps) async
+  static void _newThreadSendReport(List<InternalShop> preps) async
   {
-      Socket socket = await Socket.connect('195.38.167.138', 9891);
-      socket.write('auditor:12345\x17');
-      for(final prep in preps){
-        try {
-          socket.write('id=10;reload=true;addReport?report=${prep.text};${prep.extId == 0 ? ''
-              : 'extId=${prep.extId};'}shopId=${prep.shopId};userId=${prep.globalId}');
-          for(int i=0;i<prep.files.length;i++){
-            if(i == 0) {
-              socket.write(';photoPaths=');
-            }
-            File(prep.files[i]).existsSync() ? socket.write(File(prep.files[i]).readAsBytesSync()) : null;
-          }
-          socket.write('\x17');
-          await socket.flush();
-        }catch(e){
-          print('Oh no!Error with resend');
+    Socket socket = await Socket.connect('195.38.167.138', 9891);
+    socket.write('auditor:12345\x17');
+    for(final shop in preps){
+      try {
+        socket.write('id=10;reload=true;newTravelShop?'
+            'userId=${shop.userId}'
+            ';externalId=${shop.id}'
+            ';shopName=${shop.shopName}'
+            ';xCoord=${shop.xCoord}'
+            ';yCoord=${shop.yCoord}'
+            ';shopType=${shop.shopType.name}'
+            ';yuridicForm=${shop.yuridicForm.name}'
+            ';emptySpace=${shop.emptySpace.name}'
+            ';phoneNumber=${shop.phoneNumber}'
+            ';shopSquare=${shop.shopSquareMeter}'
+            ';casssCount=${shop.cassCount}'
+            ';prodavecManagerCount=${shop.prodavecManagerCount}'
+            ';halal=${shop.halal}'
+            ';paymentTerminal=${shop.paymanetTerminal}'
+            ';dtimeExternal=${shop.millisecsSinceEpoch~/1000}');
+        if(File(shop.photoMap['externalPhoto']!).existsSync()){
+          socket.write(';externalPhoto=');
+          socket.write(File(shop.photoMap['externalPhoto']!).readAsBytesSync());
         }
+        if(File(shop.photoMap['shopLabelPhoto']!).existsSync()){
+          socket.write(';shopLabelPhoto=');
+          socket.write(File(shop.photoMap['shopLabelPhoto']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['nonAlkoholPhoto']!).existsSync()){
+          socket.write(';nonAlkoholPhoto=');
+          socket.write(File(shop.photoMap['nonAlkoholPhoto']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['alkoholPhoto']!).existsSync()){
+          socket.write(';alkoholPhoto=');
+          socket.write(File(shop.photoMap['alkoholPhoto']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['kolbasaSyr']!).existsSync()){
+          socket.write(';kolbasaSyr=');
+          socket.write(File(shop.photoMap['kolbasaSyr']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['milk']!).existsSync()){
+          socket.write(';milk=');
+          socket.write(File(shop.photoMap['milk']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['snack']!).existsSync()){
+          socket.write(';snack=');
+          socket.write(File(shop.photoMap['snack']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['konditer']!).existsSync()){
+          socket.write(';konditer=');
+          socket.write(File(shop.photoMap['konditer']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['konserv']!).existsSync()){
+          socket.write(';konserv=');
+          socket.write(File(shop.photoMap['konserv']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['mylomoika']!).existsSync()){
+          socket.write(';mylomoika=');
+          socket.write(File(shop.photoMap['mylomoika']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['vegetablesFruits']!).existsSync()){
+          socket.write(';vegetablesFruits=');
+          socket.write(File(shop.photoMap['vegetablesFruits']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['cigarettes']!).existsSync()){
+          socket.write(';cigarettes=');
+          socket.write(File(shop.photoMap['cigarettes']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['kassovayaZona']!).existsSync()){
+          socket.write(';kassovayaZona=');
+          socket.write(File(shop.photoMap['kassovayaZona']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['toys']!).existsSync()){
+          socket.write(';toys=');
+          socket.write(File(shop.photoMap['toys']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['butter']!).existsSync()){
+          socket.write(';butter=');
+          socket.write(File(shop.photoMap['butter']!).readAsBytesSync());
+        }
+        socket.write('\x17');
+        await socket.flush();
+      }catch(e){
+        print('Oh no!Error with send PHOTOS AND NEW SHOP');
       }
-      await socket.close();
+    }
+    socket.close();
   }
 
+  void _checkLostReports(List<InternalShop> list) async
+  {
+    Future.delayed(const Duration(seconds: 50), () {
+      globalHandler.isResendReports.value = false;
+      sqlFliteDB.setUnsend();
+    });
+    globalHandler.isResendReports.value = true;
+    for(int i=0;i<list.length;i++){
+      _sendMessage(text:'checkShop?userId=${list[i].userId};extId=${list[i].id};extMillisecs=${list[i].millisecsSinceEpoch~/1000}',reload:true);
+    }
+  }
+
+  void _catchCheckShops(String text) async
+  {
+    var answer = text.split('\r');
+    if (answer.length < 3) {
+      return;
+    }
+    var categories = answer[1].split(';');
+    List<int> hasReports = [];
+    for (int i = 2; i < answer.length; i++) {
+      var temp = answer[i].split(';');
+      if (categories.contains('extId')) {
+        hasReports.add(temp[categories.indexOf('extId')] as int);
+      }
+    }
+    sqlFliteDB.setSuccessShop(hasReports);
+  }
+
+  void deleteShop(InternalShop  shop)
+  {
+    _sendMessage(text:'deleteShop?userId=${shop.userId};extId=${shop.id};extMillisecs=${shop.millisecsSinceEpoch~/1000}',reload:true);
+  }
 
   void sendReport(List<String> files, String text, int shopId, {int extId=0})
   {
@@ -236,22 +284,7 @@ class SocketHandler
     });
   }
 
-  void _dataRecive(data) async{
-    _rawBytes.addAll(data);
-    try{
-      _buffer += utf8.decode(_rawBytes);
-      _rawBytes.clear();
-      if (_buffer.contains('\x17')) {
-        var answer = _buffer.split('\x17');
-        for (int i = 0; i < answer.length; i++) {
-          _answersHub(answer[i]);
-        }
-        _buffer = answer[answer.length - 1];
-      }
-    }catch(e){
-      print(e);
-    }
-  }
+
 
   void _catchCheckReport(String text) async
   {
@@ -289,56 +322,9 @@ class SocketHandler
     }
   }
 
-  Future _reSendReports() async
-  {
-    var res = await _database?.rawQuery('SELECT * FROM report ORDER BY id');
-    List<String> listShop = [];
-    if(res != null) {
-      List<PreReport> tempReps = [];
-      for (final raw in res) {
-        DateTime dtime = DateTime.fromMillisecondsSinceEpoch(raw['millisecs_since_epoch'] as int);
-        if(dtime.difference(DateTime.now()).inMinutes.abs() > 3 || true) {
-          List<String> files = [];
-          String? text = raw['photo_path'] as String?;
-          if(text != null && text != ''){
-            files = text.split(',');
-          }
-          listShop.add(raw['shop_id'].toString());
-          var repStr = raw['report'] ?? '';
-          tempReps.add(PreReport(files, repStr as String, raw['shop_id'] as int, raw['id'] as int,globalUserId!));
-        }
-      }
-      compute(_newThreadSendReport, tempReps);
-    }
-    resendShopList?.call(listShop);
-    GlobalHandler.isResendReports.value = false;
-  }
 
-  void _answersHub(String text)
-  {
-    if(text.contains('checkShops')){
-      _catchCheckShops(text);
-    }
-    if(text.contains('checkReport')){
-      _catchCheckReport(text);
-    }
-    if(text.contains('loadShops') || text.contains('10shops')){
-      _getShopPoints(text);
-      return;
-    }
-    if(text.contains('login')){
-      _catchAccess(text);
-      return;
-    }
-    if(text.contains('shopAims')){
-      _catchAims(text);
-      return;
-    }
-    if(text.contains('getCurrentBuild')){
-      _catchBuild(text);
-      return;
-    }
-  }
+
+
 
   void _catchBuild(String text) async
   {
@@ -357,36 +343,6 @@ class SocketHandler
       }
       break;
     }
-  }
-
-  void _catchAims(String text) {
-    var answer = text.split('\r');
-    Map<int,int> activeShops = {};
-    if (answer.length < 3) {
-      return;
-    }
-    var categories = answer[1].split(';');
-    bool isDate = false;
-    for (int i = 2; i < answer.length; i++) {
-      var temp = answer[i].split(';');
-      int userId=0, shopId=0;
-      if (categories.contains('user_id')) {
-        userId = int.parse(temp[categories.indexOf('user_id')]);
-      }
-      if (categories.contains('current_shop_aim')) {
-        shopId = int.parse(temp[categories.indexOf('current_shop_aim')]);
-      }
-      if (categories.contains('date_time_updated') && !isDate) {
-        isDate = true;
-        _lastAimUpdate =
-            DateTime.parse(temp[categories.indexOf('date_time_updated')]);
-      }
-      activeShops.putIfAbsent(userId, () => shopId);
-    }
-    for(var key in activeShops.keys){
-      PointFromDbHandler().userActivePoints.value[key] = activeShops[key]!;
-    }
-    PointFromDbHandler().userActivePoints.notifyListeners();
   }
 
   void _catchAccess(String text)
@@ -435,18 +391,9 @@ class SocketHandler
     _sendMessage(text: 'login?login=$name;pwd=$password', reload: true);
   }
 
-  void getAims(bool reload)
-  {
-    if(_lastAimUpdate == null) {
-      _sendMessage(text: 'shopAims', reload: reload);
-    }else{
-      _sendMessage(text: 'shopAimsByDate?dateTime=${presentDateTime(_lastAimUpdate!,seconds: true)}', reload: reload);
-    }
-  }
-
   void _getShopPoints(String text) async
   {
-    PointFromDbHandler().pointsFromDb.value.clear();
+    pointFromDbHandler.pointsFromDb.value.clear();
     var answer = text.split('\r');
     if (answer.length < 3) {
       return;
@@ -491,12 +438,12 @@ class SocketHandler
         if (categories.contains('address')) {
           point.address = currsAnswer[categories.indexOf('address')];
         }
-        PointFromDbHandler().pointsFromDb.value.putIfAbsent(
+        pointFromDbHandler.pointsFromDb.value.putIfAbsent(
             point.id, () => point);
       }catch (e){
         print('error with this shopId: ${point.id}');
       }
     }
-    PointFromDbHandler().pointsFromDb.notifyListeners();
+    pointFromDbHandler.pointsFromDb.notifyListeners();
   }
 }

@@ -2,17 +2,24 @@
 
 import 'package:flutter/material.dart';
 import 'package:shop_audit/component/dynamic_alert_msg.dart';
+import 'package:shop_audit/component/internal_shop.dart';
+import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/global/socket_handler.dart';
+import 'package:shop_audit/main.dart';
+
+ShopType? _character = ShopType.none;
 
 class NewShopPage extends StatelessWidget
 {
   NewShopPage({Key? key}) : super(key: key);
   final TextEditingController _textController = TextEditingController();
   final TextEditingController _textDesc = TextEditingController();
+
 //
   @override
   Widget build(BuildContext context)
   {
+    final args = ModalRoute.of(context)!.settings.arguments as CustomArgument;
     return Scaffold(
         appBar: AppBar(
           title: const Text('Новый магазин'),
@@ -38,40 +45,80 @@ class NewShopPage extends StatelessWidget
                     controller: _textController,
                   ),
                   const SizedBox(height: 15,),
-                  const Text('Описание магазина:'),
-                  TextField(
-                    maxLines: 3,
-                    controller: _textDesc,
-                    decoration: InputDecoration(
-                      floatingLabelBehavior: FloatingLabelBehavior.never, //Hides label on focus or if filled
-                      labelText: "Не обязательно",
-                      filled: true, // Needed for adding a fill color
-                      fillColor: Colors.orange[100],
-                      isDense: true,  // Reduces height a bit
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide.none,              // No border
-                        borderRadius: BorderRadius.circular(12),  // Apply corner radius
-                      ),
-                    ),
-                  ),
-                  TextButton(onPressed: (){
-                    if(SocketHandler().socketState.value != SocketState.connected){
-                      customAlertMsg(context, 'Нет соединения с сервером! Подождите немного!');
-                      return;
-                    }
-                    if(_textController.text == ''){
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Введите название магазина!'),duration: Duration(seconds: 3),));
+                  const ShopTypeRadio(),
+                  TextButton(onPressed: ()async{
+                    if(_textController.text == '' || _character == ShopType.none){
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Нет названия магазина или не указан тип строения'),duration: Duration(seconds: 2),));
                     }else {
-                      SocketHandler().addShop(_textController.text, _textDesc.text);
-                      Navigator.of(context).pop();
+                      int id = await sqlFliteDB.addShop(_textController.text, _character!);
+                      if(id == 0){
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ошибка добавления магазина!'),duration: Duration(seconds: 2),));
+                      }else{
+                        Navigator.of(context).popAndPushNamed('/shopPage',arguments: CustomArgument(shopId: id));
+                      }
                     }
                   },
                     style: TextButton.styleFrom(side: const BorderSide(color: Colors.black)),
-                    child: const Text('Добавить'),
+                    child: const Text('Добавить магазин'),
                   )
                 ]
             )
         )
+    );
+  }
+}
+
+class ShopTypeRadio extends StatefulWidget {
+  const ShopTypeRadio({super.key});
+
+  @override
+  State<ShopTypeRadio> createState() => _ShopTypeRadioState();
+}
+
+class _ShopTypeRadioState extends State<ShopTypeRadio> {
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        ListTile(
+          title: const Text('В жилом доме'),
+          leading: Radio<ShopType>(
+            value: ShopType.inHomeShop,
+            groupValue: _character,
+            onChanged: (ShopType? value) {
+              setState(() {
+                _character = value;
+              });
+            },
+          ),
+        ),
+        ListTile(
+          title: const Text('Отдельное строение'),
+          leading: Radio<ShopType>(
+            value: ShopType.oneBuilding,
+            groupValue: _character,
+            onChanged: (ShopType? value) {
+              setState(() {
+                _character = value;
+              });
+            },
+          ),
+        ),
+        ListTile(
+          title: const Text('Павильон в магазине'),
+          leading: Radio<ShopType>(
+            value: ShopType.pavilon,
+            groupValue: _character,
+            onChanged: (ShopType? value) {
+              setState(() {
+                _character = value;
+              });
+            },
+          ),
+        ),
+      ],
     );
   }
 }

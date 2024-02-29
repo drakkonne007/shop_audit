@@ -12,22 +12,17 @@ class ReportPage extends StatelessWidget
   final TextEditingController _textController = TextEditingController();
   @override
   Widget build(BuildContext context) {
-    mainShared?.setString('shopReportName',  GlobalHandler.activeShopName);
-    mainShared?.setInt('reportShopId', GlobalHandler.activeShop);
     return Scaffold(
         appBar: AppBar(
-          title: Text('Отчёт: ${GlobalHandler.activeShopName}'),
+          title: Text('Отчёт: ${globalHandler.activeShopName}'),
           actions: [
             IconButton(
               onPressed: (){
                 List<String> paths = CameraHandler().imagePaths;
-                int toSend = GlobalHandler.activeShop;
-                SocketHandler().sendReport(paths,_textController.text, toSend);
-                mainShared!.setInt('reportShopId', 0);
-                mainShared!.setStringList('photos', []);
-                mainShared!.setString('shopReportName', '');
-                GlobalHandler.activeShop = 0;
-                GlobalHandler.activeShopName = '';
+                int toSend = globalHandler.activeShop;
+                socketHandler.sendReport(paths,_textController.text, toSend);
+                globalHandler.activeShop = 0;
+                globalHandler.activeShopName = '';
                 Navigator.of(context).pushNamedAndRemoveUntil('/mapScreen', (route) => false);
               },
               icon: const Icon(Icons.send),
@@ -99,7 +94,6 @@ class ReportPage extends StatelessWidget
                               key: Key(index.toString()),
                               onDismissed: (direction) {
                                 CameraHandler().imagePaths.removeWhere((element) => element == curs[index]);
-                                mainShared?.setStringList('photos', CameraHandler().imagePaths);
                                 if(CameraHandler().imagePaths.isEmpty){
                                   Navigator.of(context).pop();
                                 }

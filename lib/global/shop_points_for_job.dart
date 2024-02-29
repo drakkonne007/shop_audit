@@ -1,8 +1,7 @@
-
 import 'dart:math';
-
 import 'package:flutter/cupertino.dart';
-import 'package:shop_audit/global/global_variants.dart';
+import 'package:shop_audit/component/internal_shop.dart';
+import 'package:shop_audit/main.dart';
 
 double metersInOneAngle = 40075.0 / 360.0 * 1000.0;
 
@@ -14,93 +13,62 @@ enum SortType
   IsNeedReport,
 }
 
-class PointFromDb
-{
-  String address = '';
-  int id = -1;
-  double x = -1;
-  double y = -1;
-  String name = '';
-  String description = '';
-  String startWorkingTime = '';
-  String endWorkingTime = '';
-  DateTime dateTimeCreated = DateTime.now();
-  bool isWasReport = false;
-  bool isNeedDrawBySort = true;
-  bool isNeedDrawByCustom = true;
-}
-
 class PointFromDbHandler
 {
-  static final PointFromDbHandler _pointFromDb = PointFromDbHandler._internal();
-  factory PointFromDbHandler() {
-    return _pointFromDb;
-  }
-  PointFromDbHandler._internal();
-  ValueNotifier<Map<int,PointFromDb>> pointsFromDb = ValueNotifier({});
-  ValueNotifier<Map<int,int>> userActivePoints = ValueNotifier({}); //userID shopId
-  Set<int> customNeedsPoint = {};
+  ValueNotifier<Map<int,InternalShop>> pointsFromDb = ValueNotifier({});
   SortType sortType = SortType.None;
 
   bool isNeedShop(int id){
     if(!pointsFromDb.value.containsKey(id)){
       return false;
     }
-    return pointsFromDb.value[id]!.isNeedDrawByCustom && pointsFromDb.value[id]!.isNeedDrawBySort;
+    return pointsFromDb.value[id]!.isNeedDrawBySort;
   }
 
-  void showAllPointByUser()
+  List<InternalShop> getFilteredPoints()
   {
-    List<PointFromDb> allList = pointsFromDb.value.values.toList();
-    for(int i=0;i<allList.length;i++){
-      allList[i].isNeedDrawByCustom = true;
-    }
-  }
-
-  List<PointFromDb> getFilteredPoints()
-  {
-    List<PointFromDb> allList = pointsFromDb.value.values.toList();
-    List<PointFromDb> filteredList = [];
+    List<InternalShop> allList = pointsFromDb.value.values.toList();
+    List<InternalShop> filteredList = [];
     switch(sortType){
       case SortType.None: {
         for(int i=0;i<allList.length;i++){
           allList[i].isNeedDrawBySort = true;
-          if(allList[i].isNeedDrawByCustom && allList[i].x > 0 && allList[i].y > 0) {
+          if(allList[i].xCoord > 0 && allList[i].yCoord > 0) {
             filteredList.add(allList[i]);
           }
         }
       }
       case SortType.Distance:
-        var selfLocation = GlobalHandler.currentUserPoint;
+        var selfLocation = globalHandler.currentUserPoint;
         for(int i=0;i<allList.length;i++){
-          if(sqrt(pow(allList[i].x - selfLocation.latitude,2) + pow(allList[i].y - selfLocation.longitude,2)) *  metersInOneAngle > 5000){
+          if(sqrt(pow(allList[i].xCoord - selfLocation.latitude,2) + pow(allList[i].yCoord - selfLocation.longitude,2)) *  metersInOneAngle > 5000){
             allList[i].isNeedDrawBySort = false;
             continue;
           }
           allList[i].isNeedDrawBySort = true;
-          if(allList[i].isNeedDrawByCustom && allList[i].x != 0 && allList[i].y != 0) {
+          if(allList[i].xCoord != 0 && allList[i].yCoord != 0) {
             filteredList.add(allList[i]);
           }
         }
       case SortType.DateTimeCreated:
         for(int i=0;i<allList.length;i++){
-          if(allList[i].dateTimeCreated.millisecondsSinceEpoch < DateTime.now().add(const Duration(days: -30)).millisecondsSinceEpoch){
+          if(allList[i].millisecsSinceEpoch < DateTime.now().add(const Duration(days: -30)).millisecondsSinceEpoch){
             allList[i].isNeedDrawBySort = false;
             continue;
           }
           allList[i].isNeedDrawBySort = true;
-          if(allList[i].isNeedDrawByCustom && allList[i].x != 0 && allList[i].y != 0) {
+          if(allList[i].xCoord != 0 && allList[i].yCoord != 0) {
             filteredList.add(allList[i]);
           }
         }
       case SortType.IsNeedReport:
         for(int i=0;i<allList.length;i++){
-          if(allList[i].isWasReport){
+          if(allList[i].hasReport){
             allList[i].isNeedDrawBySort = false;
             continue;
           }
           allList[i].isNeedDrawBySort = true;
-          if(allList[i].isNeedDrawByCustom && allList[i].x != 0 && allList[i].y != 0) {
+          if(allList[i].xCoord != 0 && allList[i].yCoord != 0) {
             filteredList.add(allList[i]);
           }
         }
