@@ -17,7 +17,7 @@ class ShopPage extends StatelessWidget
         actions: [
           ElevatedButton(
             child: const Text('Отослать'),
-            onPressed: (){
+            onPressed: currShop.hasReport ? null : (){
               sqlFliteDB.sendShopToServer([currShop]);
               Navigator.of(context).pop();
             },

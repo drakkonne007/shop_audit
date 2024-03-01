@@ -1,19 +1,36 @@
-
-
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:shop_audit/component/internal_shop.dart';
+import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/main.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite/sqlite_api.dart';
+import 'package:yandex_mapkit/yandex_mapkit.dart';
+
+enum SortType
+{
+  none,
+  distance,
+  dateTimeCreated,
+}
+
+bool isNeedShop(int id){
+  if(!pointsFromDb.value.containsKey(id)){
+    return false;
+  }
+  return pointsFromDb.value[id]!.isNeedDrawBySort;
+}
 
 class SqlFliteDB
 {
   Database? _database;
   Map<int, InternalShop> shops = {};
+  Map<int, InternalShop> filteredShops = {};
   ValueNotifier<int> allShops = ValueNotifier(0);
   ValueNotifier<int> hasReports = ValueNotifier(0);
+  SortType _sortType = SortType.none;
 
   SqlFliteDB()
   {
@@ -121,6 +138,7 @@ class SqlFliteDB
     var dd = await _database?.rawQuery('INSERT INTO shop(user_id, shop_name, millisecs_since_epoch, shop_type) VALUES '
         '(${globalHandler.userId},"$shopName", ${DateTime.now().millisecondsSinceEpoch}, ${shopType.index}) returning id');
     if(dd == null) return 0;
+    _sortType = SortType.none;
     getShops();
     return dd[0]['id'] as int;
   }
@@ -179,7 +197,8 @@ class SqlFliteDB
     }
   }
 
-  void sendShopToServer(List<InternalShop> shop) {
+  void sendShopToServer(List<InternalShop> shop)
+  {
     List<InternalShop> temp = [];
     for (final shopTemp in shop) {
       if (shopTemp.hasReport == false && shopTemp.isSending == false) {
@@ -212,6 +231,52 @@ class SqlFliteDB
     }
   }
 
+  List<InternalShop> getFilteredPoints(SortType type)
+  {
+    if(_sortType == SortType.none) {
+      return shops.values.toList(growable: false);
+    }
+    if(_sortType == type) {
+      return filteredShops.values.toList(growable: false);
+    }
+    _sortType = type;
+    List<InternalShop> allList = shops.values.toList(growable: false);
+    filteredShops.clear();
+    switch(_sortType){
+      case SortType.none: {
+        for(int i=0;i<allList.length;i++){
+          allList[i].isNeedDrawBySort = true;
+          if(allList[i].xCoord > 0 && allList[i].yCoord > 0) {
+            filteredShops[allList[i].id] = allList[i];
+          }
+        }
+      }
+      case SortType.distance:
+        var selfLocation = globalHandler.currentUserPoint;
+        for(int i=0;i<allList.length;i++){
+          if(sqrt(pow(allList[i].xCoord - selfLocation.latitude,2) + pow(allList[i].yCoord - selfLocation.longitude,2)) *  metersInOneAngle > 5000){
+            allList[i].isNeedDrawBySort = false;
+            continue;
+          }
+          allList[i].isNeedDrawBySort = true;
+          if(allList[i].xCoord != 0 && allList[i].yCoord != 0) {
+            filteredShops[allList[i].id] = allList[i];
+          }
+        }
+      case SortType.dateTimeCreated:
+        for(int i=0;i<allList.length;i++){
+          if(allList[i].millisecsSinceEpoch < DateTime.now().add(const Duration(days: -30)).millisecondsSinceEpoch){
+            allList[i].isNeedDrawBySort = false;
+            continue;
+          }
+          allList[i].isNeedDrawBySort = true;
+          if(allList[i].xCoord != 0 && allList[i].yCoord != 0) {
+            filteredShops[allList[i].id] = allList[i];
+          }
+        }
+    }
+    return filteredShops.values.toList(growable: false);
+  }
 
   void resendShops()
   {

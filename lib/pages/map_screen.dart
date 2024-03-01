@@ -29,8 +29,6 @@ class _MapScreenState extends State<MapScreen>
 {
   YandexMapController? _mapController;
   Map<int, PlacemarkMapObject> _mapObjects = {};
-  List<InternalShop> _sourcePoints = [];
-  final List<int> _activeShops = [];
   late Timer _timerSelfLocation;
   late Timer _timerSetMyLocation;
   bool _isReconnect = false;
