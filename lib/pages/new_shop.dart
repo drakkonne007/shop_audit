@@ -1,10 +1,8 @@
 
 
 import 'package:flutter/material.dart';
-import 'package:shop_audit/component/dynamic_alert_msg.dart';
 import 'package:shop_audit/component/internal_shop.dart';
 import 'package:shop_audit/global/global_variants.dart';
-import 'package:shop_audit/global/socket_handler.dart';
 import 'package:shop_audit/main.dart';
 
 ShopType? _character = ShopType.none;
@@ -13,13 +11,11 @@ class NewShopPage extends StatelessWidget
 {
   NewShopPage({Key? key}) : super(key: key);
   final TextEditingController _textController = TextEditingController();
-  final TextEditingController _textDesc = TextEditingController();
 
 //
   @override
   Widget build(BuildContext context)
   {
-    final args = ModalRoute.of(context)!.settings.arguments as CustomArgument;
     return Scaffold(
         appBar: AppBar(
           title: const Text('Новый магазин'),
@@ -51,6 +47,7 @@ class NewShopPage extends StatelessWidget
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Нет названия магазина или не указан тип строения'),duration: Duration(seconds: 2),));
                     }else {
                       int id = await sqlFliteDB.addShop(_textController.text, _character!);
+                      print(id);
                       if(id == 0){
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ошибка добавления магазина!'),duration: Duration(seconds: 2),));
                       }else{
@@ -80,7 +77,7 @@ class _ShopTypeRadioState extends State<ShopTypeRadio> {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       children: <Widget>[
         ListTile(
           title: const Text('В жилом доме'),

@@ -1,14 +1,7 @@
-
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:shop_audit/component/dynamic_alert_msg.dart';
-import 'package:shop_audit/global/global_variants.dart';
-import 'package:shop_audit/global/shop_points_for_job.dart';
-import 'package:shop_audit/global/socket_handler.dart';
 import 'package:shop_audit/main.dart';
-import 'package:shop_audit/pages/camera_handler.dart';
 
 class LoadSplash extends StatefulWidget {
 

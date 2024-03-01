@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shop_audit/component/internal_shop.dart';
@@ -9,7 +11,7 @@ class ShopPage extends StatelessWidget
   @override
   Widget build(BuildContext context)
   {
-    final args = ModalRoute.of(context)!.settings.arguments as CustomArgument;
+    final args = ModalRoute.of(context)?.settings.arguments as CustomArgument;
     var currShop = sqlFliteDB.shops[args.shopId]!;
     return Scaffold(
       appBar: AppBar(
@@ -24,13 +26,12 @@ class ShopPage extends StatelessWidget
           )
         ]
       ),
-      body: Column(
+      body: ListView(
           children: [
-            TextButton(child: const Text('Анкета'), onPressed: (){
+            ElevatedButton(child: const Text('Анкета'), onPressed: (){
               Navigator.of(context).popAndPushNamed('/anketaPage',arguments: CustomArgument(shopId: args.shopId));
             }),
-            Expanded(
-                child: Table(
+            Table(
                   children: [
                     TableRow(
                         children: [
@@ -59,13 +60,13 @@ class ShopPage extends StatelessWidget
                               Navigator.of(context).popAndPushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.externalPhoto));
                             }
                           }, child: null,
-                              style: defaultNoneButtonStyle.copyWith(
-                                  backgroundBuilder: ((context, state, child){
+                              style: const ButtonStyle().copyWith(shape: MaterialStateProperty.all<RoundedRectangleBorder>(const RoundedRectangleBorder()),
+                                  foregroundBuilder: ((context, state, child){
                                     return Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
-                                        currShop.photoMap['externalPhoto']! == '' ? const SizedBox(width: 50,height: 50,) : Image.asset(currShop.photoMap['externalPhoto']!,width: 50,height: 50,),
+                                        currShop.photoMap['externalPhoto']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['externalPhoto']!),width: 50,height: 100,),
                                         const Text('Фото снаружи')
                                       ],
                                     );
@@ -97,13 +98,13 @@ class ShopPage extends StatelessWidget
                               Navigator.of(context).popAndPushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.shopLabelPhoto));
                             }
                           }, child: null,
-                              style: defaultNoneButtonStyle.copyWith(
-                                  backgroundBuilder: ((context, state, child){
+                              style: const ButtonStyle().copyWith(shape: MaterialStateProperty.all<RoundedRectangleBorder>(const RoundedRectangleBorder()),
+                                  foregroundBuilder: ((context, state, child){
                                     return Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
-                                        currShop.photoMap['shopLabelPhoto']! == '' ? const SizedBox(width: 50,height: 50,) : Image.asset(currShop.photoMap['shopLabelPhoto']!,width: 50,height: 50,),
+                                        currShop.photoMap['shopLabelPhoto']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['shopLabelPhoto']!),width: 50,height: 100,),
                                         const Text('Вывеска')
                                       ],
                                     );
@@ -112,8 +113,6 @@ class ShopPage extends StatelessWidget
                           ),
                         ]
                     ),
-
-
                     TableRow(
                         children: [
                           ElevatedButton(onPressed: ()async{
@@ -141,13 +140,13 @@ class ShopPage extends StatelessWidget
                               Navigator.of(context).popAndPushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.alkoholPhoto));
                             }
                           }, child: null,
-                              style: defaultNoneButtonStyle.copyWith(
-                                  backgroundBuilder: ((context, state, child){
+                              style: const ButtonStyle().copyWith(shape: MaterialStateProperty.all<RoundedRectangleBorder>(const RoundedRectangleBorder()),
+                                  foregroundBuilder: ((context, state, child){
                                     return Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
-                                        currShop.photoMap['alkoholPhoto']! == '' ? const SizedBox(width: 50,height: 50,) : Image.asset(currShop.photoMap['alkoholPhoto']!,width: 50,height: 50,),
+                                        currShop.photoMap['alkoholPhoto']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['alkoholPhoto']!),width: 50,height: 100,),
                                         const Text('Алкоголь')
                                       ],
                                     );
@@ -179,13 +178,13 @@ class ShopPage extends StatelessWidget
                               Navigator.of(context).popAndPushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.nonAlkoholPhoto));
                             }
                           }, child: null,
-                              style: defaultNoneButtonStyle.copyWith(
-                                  backgroundBuilder: ((context, state, child){
+                              style: const ButtonStyle().copyWith(shape: MaterialStateProperty.all<RoundedRectangleBorder>(const RoundedRectangleBorder()),
+                                  foregroundBuilder: ((context, state, child){
                                     return Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
-                                        currShop.photoMap['nonAlkoholPhoto']! == '' ? const SizedBox(width: 50,height: 50,) : Image.asset(currShop.photoMap['nonAlkoholPhoto']!,width: 50,height: 50,),
+                                        currShop.photoMap['nonAlkoholPhoto']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['nonAlkoholPhoto']!),width: 50,height: 100,),
                                         const Text('Без алкоголь')
                                       ],
                                     );
@@ -222,13 +221,13 @@ class ShopPage extends StatelessWidget
                               Navigator.of(context).popAndPushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.kolbasaSyr));
                             }
                           }, child: null,
-                              style: defaultNoneButtonStyle.copyWith(
-                                  backgroundBuilder: ((context, state, child){
+                              style: const ButtonStyle().copyWith(shape: MaterialStateProperty.all<RoundedRectangleBorder>(const RoundedRectangleBorder()),
+                                  foregroundBuilder: ((context, state, child){
                                     return Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
-                                        currShop.photoMap['kolbasaSyr']! == '' ? const SizedBox(width: 50,height: 50,) : Image.asset(currShop.photoMap['kolbasaSyr']!,width: 50,height: 50,),
+                                        currShop.photoMap['kolbasaSyr']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['kolbasaSyr']!),width: 50,height: 100,),
                                         const Text('Колбаса и сыр')
                                       ],
                                     );
@@ -260,13 +259,13 @@ class ShopPage extends StatelessWidget
                               Navigator.of(context).popAndPushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.milk));
                             }
                           }, child: null,
-                              style: defaultNoneButtonStyle.copyWith(
-                                  backgroundBuilder: ((context, state, child){
+                              style: const ButtonStyle().copyWith(shape: MaterialStateProperty.all<RoundedRectangleBorder>(const RoundedRectangleBorder()),
+                                  foregroundBuilder: ((context, state, child){
                                     return Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
-                                        currShop.photoMap['milk']! == '' ? const SizedBox(width: 50,height: 50,) : Image.asset(currShop.photoMap['milk']!,width: 50,height: 50,),
+                                        currShop.photoMap['milk']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['milk']!),width: 50,height: 100,),
                                         const Text('Молочка')
                                       ],
                                     );
@@ -303,13 +302,13 @@ class ShopPage extends StatelessWidget
                               Navigator.of(context).popAndPushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.snack));
                             }
                           }, child: null,
-                              style: defaultNoneButtonStyle.copyWith(
-                                  backgroundBuilder: ((context, state, child){
+                              style: const ButtonStyle().copyWith(shape: MaterialStateProperty.all<RoundedRectangleBorder>(const RoundedRectangleBorder()),
+                                  foregroundBuilder: ((context, state, child){
                                     return Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
-                                        currShop.photoMap['snack']! == '' ? const SizedBox(width: 50,height: 50,) : Image.asset(currShop.photoMap['snack']!,width: 50,height: 50,),
+                                        currShop.photoMap['snack']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['snack']!),width: 50,height: 100,),
                                         const Text('Снэки')
                                       ],
                                     );
@@ -341,13 +340,13 @@ class ShopPage extends StatelessWidget
                               Navigator.of(context).popAndPushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.konditer));
                             }
                           }, child: null,
-                              style: defaultNoneButtonStyle.copyWith(
-                                  backgroundBuilder: ((context, state, child){
+                              style: const ButtonStyle().copyWith(shape: MaterialStateProperty.all<RoundedRectangleBorder>(const RoundedRectangleBorder()),
+                                  foregroundBuilder: ((context, state, child){
                                     return Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
-                                        currShop.photoMap['konditer']! == '' ? const SizedBox(width: 50,height: 50,) : Image.asset(currShop.photoMap['konditer']!,width: 50,height: 50,),
+                                        currShop.photoMap['konditer']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['konditer']!),width: 50,height: 100,),
                                         const Text('Кондитерская')
                                       ],
                                     );
@@ -384,13 +383,13 @@ class ShopPage extends StatelessWidget
                               Navigator.of(context).popAndPushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.konserv));
                             }
                           }, child: null,
-                              style: defaultNoneButtonStyle.copyWith(
-                                  backgroundBuilder: ((context, state, child){
+                              style: const ButtonStyle().copyWith(shape: MaterialStateProperty.all<RoundedRectangleBorder>(const RoundedRectangleBorder()),
+                                  foregroundBuilder: ((context, state, child){
                                     return Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
-                                        currShop.photoMap['konserv']! == '' ? const SizedBox(width: 50,height: 50,) : Image.asset(currShop.photoMap['konserv']!,width: 50,height: 50,),
+                                        currShop.photoMap['konserv']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['konserv']!),width: 50,height: 100,),
                                         const Text('Консервы')
                                       ],
                                     );
@@ -422,13 +421,13 @@ class ShopPage extends StatelessWidget
                               Navigator.of(context).popAndPushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.mylomoika));
                             }
                           }, child: null,
-                              style: defaultNoneButtonStyle.copyWith(
-                                  backgroundBuilder: ((context, state, child){
+                              style: const ButtonStyle().copyWith(shape: MaterialStateProperty.all<RoundedRectangleBorder>(const RoundedRectangleBorder()),
+                                  foregroundBuilder: ((context, state, child){
                                     return Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
-                                        currShop.photoMap['mylomoika']! == '' ? const SizedBox(width: 50,height: 50,) : Image.asset(currShop.photoMap['mylomoika']!,width: 50,height: 50,),
+                                        currShop.photoMap['mylomoika']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['mylomoika']!),width: 50,height: 100,),
                                         const Text('Мыломойка')
                                       ],
                                     );
@@ -465,13 +464,14 @@ class ShopPage extends StatelessWidget
                               Navigator.of(context).popAndPushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.vegetablesFruits));
                             }
                           }, child: null,
-                              style: defaultNoneButtonStyle.copyWith(
-                                  backgroundBuilder: ((context, state, child){
-                                    return Column(
+                              style: const ButtonStyle().copyWith(shape: MaterialStateProperty.all<RoundedRectangleBorder>(const RoundedRectangleBorder()),
+                                  foregroundBuilder: ((context, state, child){
+                                    return  Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       crossAxisAlignment: CrossAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.max,
                                       children: [
-                                        currShop.photoMap['vegetablesFruits']! == '' ? const SizedBox(width: 50,height: 50,) : Image.asset(currShop.photoMap['vegetablesFruits']!,width: 50,height: 50,),
+                                        currShop.photoMap['vegetablesFruits']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['vegetablesFruits']!),width: 50,height: 100,),
                                         const Text('Фрукты/Овощи')
                                       ],
                                     );
@@ -503,14 +503,15 @@ class ShopPage extends StatelessWidget
                               Navigator.of(context).popAndPushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.cigarettes));
                             }
                           }, child: null,
-                              style: defaultNoneButtonStyle.copyWith(
-                                  backgroundBuilder: ((context, state, child){
+                              style: const ButtonStyle().copyWith(shape: MaterialStateProperty.all<RoundedRectangleBorder>(const RoundedRectangleBorder()),
+                                  foregroundBuilder: ((context, state, child){
                                     return Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       crossAxisAlignment: CrossAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        currShop.photoMap['cigarettes']! == '' ? const SizedBox(width: 50,height: 50,) : Image.asset(currShop.photoMap['cigarettes']!,width: 50,height: 50,),
-                                        const Text('Сигареты')
+                                        currShop.photoMap['cigarettes']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['cigarettes']!),width: 50,height: 100,),
+                                        const Text('Сигареты'),
                                       ],
                                     );
                                   })
@@ -546,13 +547,13 @@ class ShopPage extends StatelessWidget
                               Navigator.of(context).popAndPushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.kassovayaZona));
                             }
                           }, child: null,
-                              style: defaultNoneButtonStyle.copyWith(
-                                  backgroundBuilder: ((context, state, child){
+                              style: const ButtonStyle().copyWith(shape: MaterialStateProperty.all<RoundedRectangleBorder>(const RoundedRectangleBorder()),
+                                  foregroundBuilder: ((context, state, child){
                                     return Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
-                                        currShop.photoMap['kassovayaZona']! == '' ? const SizedBox(width: 50,height: 50,) : Image.asset(currShop.photoMap['kassovayaZona']!,width: 50,height: 50,),
+                                        currShop.photoMap['kassovayaZona']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['kassovayaZona']!),width: 50,height: 100,),
                                         const Text('Касса')
                                       ],
                                     );
@@ -584,13 +585,13 @@ class ShopPage extends StatelessWidget
                               Navigator.of(context).popAndPushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.toys));
                             }
                           }, child: null,
-                              style: defaultNoneButtonStyle.copyWith(
-                                  backgroundBuilder: ((context, state, child){
+                              style: const ButtonStyle().copyWith(shape: MaterialStateProperty.all<RoundedRectangleBorder>(const RoundedRectangleBorder()),
+                                  foregroundBuilder: ((context, state, child){
                                     return Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
-                                        currShop.photoMap['toys']! == '' ? const SizedBox(width: 50,height: 50,) : Image.asset(currShop.photoMap['toys']!,width: 50,height: 50,),
+                                        currShop.photoMap['toys']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['toys']!),width: 50,height: 100,),
                                         const Text('Игрушки')
                                       ],
                                     );
@@ -615,7 +616,7 @@ class ShopPage extends StatelessWidget
                                     ),
                                     TextButton(
                                       onPressed: () => Navigator.pop(context, true),
-                                      child: const Text('Да'),
+                                      child: const Text('Да', style: TextStyle(backgroundColor: Colors.red, color: Colors.blue),),
                                     ),
                                   ],
                                 ),
@@ -627,14 +628,14 @@ class ShopPage extends StatelessWidget
                               Navigator.of(context).popAndPushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.butter));
                             }
                           }, child: null,
-                              style: defaultNoneButtonStyle.copyWith(
-                                  backgroundBuilder: ((context, state, child){
+                              style: const ButtonStyle().copyWith(shape: MaterialStateProperty.all<RoundedRectangleBorder>(const RoundedRectangleBorder()),
+                                  foregroundBuilder: ((context, state, child){
                                     return Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
-                                        currShop.photoMap['butter']! == '' ? const SizedBox(width: 50,height: 50,) : Image.asset(currShop.photoMap['butter']!,width: 50,height: 50,),
-                                        const Text('Хлеб')
+                                        currShop.photoMap['butter']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['butter']!),width: 50,height: 100,),
+                                        const Text('Хлеб'),
                                       ],
                                     );
                                   })
@@ -645,7 +646,6 @@ class ShopPage extends StatelessWidget
                     )
                   ],
                 )
-            )
           ]
       ),
     );

@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/global/internalDatabase.dart';
-import 'package:shop_audit/global/shop_points_for_job.dart';
 import 'package:shop_audit/global/socket_handler.dart';
+import 'package:shop_audit/pages/anketaPage.dart';
+import 'package:shop_audit/pages/camera_handler.dart';
 import 'package:shop_audit/pages/load_splash.dart';
 import 'package:shop_audit/pages/login.dart';
 import 'package:shop_audit/pages/new_shop.dart';
@@ -12,13 +13,13 @@ import 'package:shop_audit/pages/photo_page.dart';
 import 'package:shop_audit/pages/report.dart';
 import 'package:shop_audit/pages/map_screen.dart';
 import 'package:shop_audit/global/database.dart';
+import 'package:shop_audit/pages/shopPage.dart';
 
 SharedPreferences? mainShared;
 const int versionApk = 5;
 GlobalHandler globalHandler = GlobalHandler();
-PointFromDbHandler pointFromDbHandler = PointFromDbHandler();
 SocketHandler socketHandler = SocketHandler();
-SqlFliteDB sqlFliteDB = SqlFliteDB();
+late SqlFliteDB sqlFliteDB;
 
 String presentDateTime(DateTime dateTime, {bool seconds = false})
 {
@@ -32,6 +33,9 @@ String presentDateTime(DateTime dateTime, {bool seconds = false})
 Future<void> main() async{
   WidgetsFlutterBinding.ensureInitialized();
   mainShared = await SharedPreferences.getInstance();
+  sqlFliteDB = SqlFliteDB();
+  sqlFliteDB.openDb();
+  CameraHandler().loadCameras();
   // if(await DatabaseClient().openDB()){
   //   // await DatabaseClient().getShopPoints();
   //   await DatabaseClient().getReverseShopPoints();
@@ -40,7 +44,8 @@ Future<void> main() async{
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatelessWidget
+{
   const MyApp({super.key});
 
   MaterialColor getMaterialColor(Color color) {
@@ -79,9 +84,11 @@ class MyApp extends StatelessWidget {
         '/login': (context) => LoginPage(),
         '/photoPage': (context) => PhotoPage(),
         '/newShop': (context) => NewShopPage(),
+        '/shopPage': (context) => ShopPage(),
         // '/points': (context) => PointsPage(),
-        '/report': (context) => ReportPage(),
+        // '/report': (context) => ReportPage(),
         '/loadSplash': (context) => LoadSplash(),
+        '/anketaPage': (context) => AnketaPage(),
       },
     );
   }

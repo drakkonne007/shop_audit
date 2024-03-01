@@ -1,7 +1,5 @@
 
 import 'package:postgres/postgres.dart';
-import 'package:shop_audit/component/internal_shop.dart';
-import 'package:shop_audit/global/shop_points_for_job.dart';
 import 'package:yandex_mapkit/yandex_mapkit.dart';
 
 

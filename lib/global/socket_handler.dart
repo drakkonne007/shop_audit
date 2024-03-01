@@ -3,11 +3,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:js_interop';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shop_audit/component/internal_shop.dart';
-import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/main.dart';
 
 class PreReport
@@ -54,7 +52,6 @@ class SocketHandler
       // _socket = await Socket.connect('10.11.100.189', 9891);
       _socket.listen(_dataRecive,
           onDone: () {
-            print('onDone');
             if(!isLoading){
               socketState.value = SocketState.disconnected;
               isLoading = true;
@@ -62,7 +59,6 @@ class SocketHandler
             }
           },
           onError: (error) {
-            print('onError');
             if(!isLoading){
               socketState.value = SocketState.disconnected;
               isLoading = true;
@@ -104,13 +100,13 @@ class SocketHandler
     if(text.contains('checkShop')){
       _catchCheckShops(text);
     }
-    if(text.contains('checkReport')){
-      _catchCheckReport(text);
-    }
-    if(text.contains('loadShops') || text.contains('10shops')){
-      _getShopPoints(text);
-      return;
-    }
+    // if(text.contains('checkReport')){
+    //   _catchCheckReport(text);
+    // }
+    // if(text.contains('loadShops') || text.contains('10shops')){
+    //   _getShopPoints(text);
+    //   return;
+    // }
     if(text.contains('login')){
       _catchAccess(text);
       return;
@@ -131,14 +127,14 @@ class SocketHandler
 
   void sendMyPosition(double xCoord,double yCoord)
   {
-    _sendMessage(text:'setCurrPosition?auditorId=${globalHandler.userId};xCoord=$xCoord;yCoord=$yCoord;dtime=${DateTime.now().millisecondsSinceEpoch / 1000}',reload:true);
+    _sendMessage(text:'setCurrPosition?userId=${globalHandler.userId};xCoord=$xCoord;yCoord=$yCoord;dtime=${(DateTime.now().millisecondsSinceEpoch ~/ 1000)}',reload:true);
   }
 
   void sendShop(List<InternalShop> shops)
   {
     compute(_newThreadSendReport, shops);
     Future.delayed(const Duration(minutes: 1), () {
-      _checkLostReports(sqlFliteDB.getNonHasReport());
+      checkLostReports();
     });
   }
 
@@ -158,10 +154,11 @@ class SocketHandler
             ';yuridicForm=${shop.yuridicForm.name}'
             ';emptySpace=${shop.emptySpace.name}'
             ';phoneNumber=${shop.phoneNumber}'
+            ';address=${shop.address}'
             ';shopSquare=${shop.shopSquareMeter}'
-            ';casssCount=${shop.cassCount}'
+            ';cassCount=${shop.cassCount}'
             ';prodavecManagerCount=${shop.prodavecManagerCount}'
-            ';halal=${shop.halal}'
+            ';halal=${shop.halal ? 1 : 0}'
             ';paymentTerminal=${shop.paymanetTerminal}'
             ';dtimeExternal=${shop.millisecsSinceEpoch~/1000}');
         if(File(shop.photoMap['externalPhoto']!).existsSync()){
@@ -233,9 +230,13 @@ class SocketHandler
     socket.close();
   }
 
-  void _checkLostReports(List<InternalShop> list) async
+  void checkLostReports() async
   {
-    Future.delayed(const Duration(seconds: 50), () {
+    var list = sqlFliteDB.getNonHasReport();
+    if(list.isEmpty){
+      return;
+    }
+    Future.delayed(const Duration(seconds: 30), () {
       globalHandler.isResendReports.value = false;
       sqlFliteDB.setUnsend();
     });
@@ -255,8 +256,8 @@ class SocketHandler
     List<int> hasReports = [];
     for (int i = 2; i < answer.length; i++) {
       var temp = answer[i].split(';');
-      if (categories.contains('extId')) {
-        hasReports.add(temp[categories.indexOf('extId')] as int);
+      if (categories.contains('ext_id')) {
+        hasReports.add(int.tryParse(temp[categories.indexOf('ext_id')]) ?? 0);
       }
     }
     sqlFliteDB.setSuccessShop(hasReports);
@@ -267,60 +268,58 @@ class SocketHandler
     _sendMessage(text:'deleteShop?userId=${shop.userId};extId=${shop.id};extMillisecs=${shop.millisecsSinceEpoch~/1000}',reload:true);
   }
 
-  void sendReport(List<String> files, String text, int shopId, {int extId=0})
-  {
-    _createDbDump(files, text, shopId).then((value){
-      getLastRawInt().then((value){
-        extId = value;
-        _socket.write('id=10;reload=true;addReport?report=$text;${extId == 0 ? '' : 'extId=$extId;'}shopId=$shopId;userId=$globalUserId');
-        for(int i=0;i<files.length;i++){
-          if(i == 0) {
-            _socket.write(';photoPaths=');
-          }
-          File(files[i]).existsSync() ?  _socket.write(File(files[i]).readAsBytesSync()) : null;
-        }
-        _socket.write('\x17');
-      });
-    });
-  }
+  // void sendReport(List<String> files, String text, int shopId, {int extId=0})
+  // {
+  //   _createDbDump(files, text, shopId).then((value){
+  //     getLastRawInt().then((value){
+  //       extId = value;
+  //       _socket.write('id=10;reload=true;addReport?report=$text;${extId == 0 ? '' : 'extId=$extId;'}shopId=$shopId;userId=$globalUserId');
+  //       for(int i=0;i<files.length;i++){
+  //         if(i == 0) {
+  //           _socket.write(';photoPaths=');
+  //         }
+  //         File(files[i]).existsSync() ?  _socket.write(File(files[i]).readAsBytesSync()) : null;
+  //       }
+  //       _socket.write('\x17');
+  //     });
+  //   });
+  // }
 
-
-
-  void _catchCheckReport(String text) async
-  {
-    var answer = text.split('\r');
-    if (answer.length < 3) {
-      return;
-    }
-    Map<int,String> rawResFromExternalDb = {};
-    var categories = answer[1].split(';');
-    for (int i=2; i<answer.length; i++) {
-      var temp = answer[i].split(';');
-      int id = 0;
-      if(categories.contains('sqlite_ext_id')){
-        id = int.parse(temp[categories.indexOf('sqlite_ext_id')]);
-      }
-      if(categories.contains('photo_path')){
-        rawResFromExternalDb[id] = temp[categories.indexOf('photo_path')];
-      }else{
-        rawResFromExternalDb[id] = '';
-      }
-    }
-    var res = await _database?.rawQuery('SELECT id,photo_path FROM report ORDER BY id');
-    if(res == null){
-      return;
-    }
-    for(final raw in res){
-      if(rawResFromExternalDb.containsKey(raw['id'])){
-        int externalComas = rawResFromExternalDb[raw['id']]!.split(',').length;
-        String text = raw['photo_path'] as String;
-        int internalComas = text.split(',').length;
-        if(externalComas == internalComas){
-          await _database?.execute('DELETE FROM report WHERE id=${raw['id']}');
-        }
-      }
-    }
-  }
+  // void _catchCheckReport(String text) async
+  // {
+  //   var answer = text.split('\r');
+  //   if (answer.length < 3) {
+  //     return;
+  //   }
+  //   Map<int,String> rawResFromExternalDb = {};
+  //   var categories = answer[1].split(';');
+  //   for (int i=2; i<answer.length; i++) {
+  //     var temp = answer[i].split(';');
+  //     int id = 0;
+  //     if(categories.contains('sqlite_ext_id')){
+  //       id = int.parse(temp[categories.indexOf('sqlite_ext_id')]);
+  //     }
+  //     if(categories.contains('photo_path')){
+  //       rawResFromExternalDb[id] = temp[categories.indexOf('photo_path')];
+  //     }else{
+  //       rawResFromExternalDb[id] = '';
+  //     }
+  //   }
+  //   var res = await _database?.rawQuery('SELECT id,photo_path FROM report ORDER BY id');
+  //   if(res == null){
+  //     return;
+  //   }
+  //   for(final raw in res){
+  //     if(rawResFromExternalDb.containsKey(raw['id'])){
+  //       int externalComas = rawResFromExternalDb[raw['id']]!.split(',').length;
+  //       String text = raw['photo_path'] as String;
+  //       int internalComas = text.split(',').length;
+  //       if(externalComas == internalComas){
+  //         await _database?.execute('DELETE FROM report WHERE id=${raw['id']}');
+  //       }
+  //     }
+  //   }
+  // }
 
 
 
@@ -358,7 +357,7 @@ class SocketHandler
       var temp = answer[i].split(';');
       if(categories.contains('id')){
         int userId = int.parse(temp[categories.indexOf('id')]);
-        globalUserId = userId;
+        globalHandler.userId = userId;
         isLogged = true;
       }
       break;
@@ -368,12 +367,12 @@ class SocketHandler
 
   void loadShops(bool reload)
   {
-    _sendMessage(text: 'loadShops?id=$globalUserId', reload: reload);
+    _sendMessage(text: 'loadShops?id=${globalHandler.userId}', reload: reload);
   }
 
   void updateCurrentAim(String shopId)
   {
-    _sendMessage(text: 'updateCurrentAim?shopId=$shopId;userId=$globalUserId', reload: true);
+    _sendMessage(text: 'updateCurrentAim?shopId=$shopId;userId=${globalHandler.userId}', reload: true);
   }
 
   Future<void> _sendMessage({required String text, bool reload=false, int? id}) async
@@ -391,59 +390,59 @@ class SocketHandler
     _sendMessage(text: 'login?login=$name;pwd=$password', reload: true);
   }
 
-  void _getShopPoints(String text) async
-  {
-    pointFromDbHandler.pointsFromDb.value.clear();
-    var answer = text.split('\r');
-    if (answer.length < 3) {
-      return;
-    }
-    var categories = answer[1].split(';');
-    for (int i=2; i<answer.length; i++) {
-      PointFromDb point = PointFromDb();
-      var currsAnswer = answer[i].split(';');
-      try {
-        if (categories.contains('x')) {
-          point.x = double.parse(currsAnswer[categories.indexOf('x')]);
-        }
-        if (categories.contains('y')) {
-          point.y = double.parse(currsAnswer[categories.indexOf('y')]);
-        }
-        if (categories.contains('name')) {
-          point.name = currsAnswer[categories.indexOf('name')];
-        }
-        if (categories.contains('description')) {
-          point.description = currsAnswer[categories.indexOf('description')];
-        }
-        if (categories.contains('start_work_time')) {
-          point.startWorkingTime =
-          currsAnswer[categories.indexOf('start_work_time')];
-        }
-        if (categories.contains('finish_work_time')) {
-          point.endWorkingTime =
-          currsAnswer[categories.indexOf('finish_work_time')];
-        }
-        if (categories.contains('date_time_created')) {
-          point.dateTimeCreated = DateTime.tryParse(
-              currsAnswer[categories.indexOf('date_time_created')]) ??
-              DateTime.now();
-        }
-        if (categories.contains('has_report')) {
-          point.isWasReport =
-              currsAnswer[categories.indexOf('has_report')] == 't';
-        }
-        if (categories.contains('id')) {
-          point.id = int.parse(currsAnswer[categories.indexOf('id')]);
-        }
-        if (categories.contains('address')) {
-          point.address = currsAnswer[categories.indexOf('address')];
-        }
-        pointFromDbHandler.pointsFromDb.value.putIfAbsent(
-            point.id, () => point);
-      }catch (e){
-        print('error with this shopId: ${point.id}');
-      }
-    }
-    pointFromDbHandler.pointsFromDb.notifyListeners();
-  }
+  // void _getShopPoints(String text) async
+  // {
+  //   pointFromDbHandler.pointsFromDb.value.clear();
+  //   var answer = text.split('\r');
+  //   if (answer.length < 3) {
+  //     return;
+  //   }
+  //   var categories = answer[1].split(';');
+  //   for (int i=2; i<answer.length; i++) {
+  //     PointFromDb point = PointFromDb();
+  //     var currsAnswer = answer[i].split(';');
+  //     try {
+  //       if (categories.contains('x')) {
+  //         point.x = double.parse(currsAnswer[categories.indexOf('x')]);
+  //       }
+  //       if (categories.contains('y')) {
+  //         point.y = double.parse(currsAnswer[categories.indexOf('y')]);
+  //       }
+  //       if (categories.contains('name')) {
+  //         point.name = currsAnswer[categories.indexOf('name')];
+  //       }
+  //       if (categories.contains('description')) {
+  //         point.description = currsAnswer[categories.indexOf('description')];
+  //       }
+  //       if (categories.contains('start_work_time')) {
+  //         point.startWorkingTime =
+  //         currsAnswer[categories.indexOf('start_work_time')];
+  //       }
+  //       if (categories.contains('finish_work_time')) {
+  //         point.endWorkingTime =
+  //         currsAnswer[categories.indexOf('finish_work_time')];
+  //       }
+  //       if (categories.contains('date_time_created')) {
+  //         point.dateTimeCreated = DateTime.tryParse(
+  //             currsAnswer[categories.indexOf('date_time_created')]) ??
+  //             DateTime.now();
+  //       }
+  //       if (categories.contains('has_report')) {
+  //         point.isWasReport =
+  //             currsAnswer[categories.indexOf('has_report')] == 't';
+  //       }
+  //       if (categories.contains('id')) {
+  //         point.id = int.parse(currsAnswer[categories.indexOf('id')]);
+  //       }
+  //       if (categories.contains('address')) {
+  //         point.address = currsAnswer[categories.indexOf('address')];
+  //       }
+  //       pointFromDbHandler.pointsFromDb.value.putIfAbsent(
+  //           point.id, () => point);
+  //     }catch (e){
+  //       print('error with this shopId: ${point.id}');
+  //     }
+  //   }
+  //   pointFromDbHandler.pointsFromDb.notifyListeners();
+  // }
 }

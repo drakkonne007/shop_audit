@@ -7,7 +7,6 @@ import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/main.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite/sqlite_api.dart';
-import 'package:yandex_mapkit/yandex_mapkit.dart';
 
 enum SortType
 {
@@ -16,34 +15,22 @@ enum SortType
   dateTimeCreated,
 }
 
-bool isNeedShop(int id){
-  if(!pointsFromDb.value.containsKey(id)){
-    return false;
-  }
-  return pointsFromDb.value[id]!.isNeedDrawBySort;
-}
-
 class SqlFliteDB
 {
   Database? _database;
   Map<int, InternalShop> shops = {};
   Map<int, InternalShop> filteredShops = {};
-  ValueNotifier<int> allShops = ValueNotifier(0);
-  ValueNotifier<int> hasReports = ValueNotifier(0);
   SortType _sortType = SortType.none;
-
-  SqlFliteDB()
-  {
-    if (_database == null) openDb();
-  }
+  int hasReportCount = 0;
+  ValueNotifier<int> shopList = ValueNotifier(0); //TODO ЭТО ЗАГЛУШКА ДЛЯ ОБНОВЛЕНИЯ КАРТЫ!!!
 
   void openDb() async
   {
     var databasesPath = await getDatabasesPath();
     String path = join(databasesPath, 'internalShops.db');
-    _database = await openDatabase(path, version: 1,
-        onCreate: (Database db, int version) {
-          db.execute('CREATE TABLE shop '
+    _database = await openDatabase(path, version: 2,
+        onOpen: (Database db) {
+          db.execute('CREATE TABLE IF NOT EXISTS travel_shop '
               '(id INTEGER PRIMARY KEY autoincrement NOT NULL'
               ',user_id INTEGER NOT NULL'
               ',shop_name TEXT NOT NULL'
@@ -51,6 +38,7 @@ class SqlFliteDB
               ',yuridic_form TEXT'
               ',has_report INTEGER NOT NULL DEFAULT 0'
               ',was_sending INTEGER NOT NULL DEFAULT 0'
+              ',address TEXT'
               ',x REAL'
               ',y REAL'
               ',external_photo TEXT'
@@ -75,20 +63,32 @@ class SqlFliteDB
               ',halal INTEGER'
               ',paymanet_terminal INTEGER'
               ',empty_space TEXT'
-              ',millisecs_since_epoch INTEGER NOT NULL'
-              ',)');
+              ',millisecs_since_epoch INTEGER NOT NULL)');
         });
+    // await _database?.execute('DELETE FROM travel_shop');
+    getShops();
+    nonReportShops();
+    socketHandler.checkLostReports();
   }
 
   Future<Map<int, InternalShop>> getShops()async
   {
-    var res = await _database?.rawQuery('SELECT * FROM shop ORDER BY id');
+    var res = await _database?.rawQuery('SELECT * FROM travel_shop ORDER BY id');
     if (res == null) {
       return {};
     }else{
       shops = _createShopsFromDB(res);
       return shops;
     }
+  }
+
+  void nonReportShops() async
+  {
+    var res = await _database?.rawQuery('SELECT COUNT(*) as count FROM travel_shop WHERE has_report = true');
+    if (res == null) {
+      return;
+    }
+    hasReportCount = res[0]['count'] as int;
   }
 
   Map<int, InternalShop> _createShopsFromDB(List<Map<String,Object?>> res)
@@ -98,6 +98,7 @@ class SqlFliteDB
       InternalShop shop = InternalShop(raw['id'] as int);
       shop.userId = raw['user_id'] as int;
       shop.shopName = raw['shop_name'].toString();
+      shop.address = raw['address'].toString();
       shop.xCoord = raw['x'] == null ? 0 : raw['x'] as double;
       shop.yCoord = raw['y'] == null ? 0 : raw['y'] as double;
       shop.photoMap['externalPhoto'] = raw['external_photo'] == null ? '' : raw['external_photo'].toString();
@@ -135,12 +136,14 @@ class SqlFliteDB
 
   Future<int> addShop(String shopName, ShopType shopType) async
   {
-    var dd = await _database?.rawQuery('INSERT INTO shop(user_id, shop_name, millisecs_since_epoch, shop_type) VALUES '
-        '(${globalHandler.userId},"$shopName", ${DateTime.now().millisecondsSinceEpoch}, ${shopType.index}) returning id');
-    if(dd == null) return 0;
+    int? dd = await _database?.rawInsert('INSERT INTO travel_shop(user_id, shop_name, millisecs_since_epoch, shop_type,x,y) VALUES '
+        '(${globalHandler.userId},"$shopName", ${DateTime.now().millisecondsSinceEpoch}, "${shopType.name}", ${globalHandler.currentUserPoint.latitude}, ${globalHandler.currentUserPoint.longitude})');
+    if(dd == null || dd == 0) return 0;
     _sortType = SortType.none;
     getShops();
-    return dd[0]['id'] as int;
+    nonReportShops();
+    shopList.notifyListeners();
+    return dd;
   }
 
   void setPhoto(int shopId, PhotoType type, String path)
@@ -154,7 +157,7 @@ class SqlFliteDB
 
   void updateShop(InternalShop newShop)
   {
-    _database?.execute('UPDATE shop SET '
+    _database?.rawUpdate('UPDATE travel_shop SET '
         'shop_name = "${newShop.shopName}", '
         'x = ${newShop.xCoord}, '
         'y = ${newShop.yCoord}, '
@@ -175,25 +178,32 @@ class SqlFliteDB
         'butter = "${newShop.photoMap['butter']}", '
         'phone_number = "${newShop.phoneNumber}", '
         'shop_square_meter = ${newShop.shopSquareMeter}, '
-        'yuridic_form = ${newShop.yuridicForm.name}, '
+        'yuridic_form = "${newShop.yuridicForm.name}", '
         'cass_count = ${newShop.cassCount}, '
         'prodavec_manager_count = ${newShop.prodavecManagerCount}, '
-        'halyal = ${newShop.halal ? 1 : 0}, '
+        'halal = ${newShop.halal ? 1 : 0},'
+        'has_report = false, '
+        'was_sending = false, '
         'paymanet_terminal = ${newShop.paymanetTerminal},'
-        'shop_type = ${newShop.shopType.name}, '
-        'empty_space = ${newShop.emptySpace.name}'
+        'shop_type = "${newShop.shopType.name}", '
+        'empty_space = "${newShop.emptySpace.name}",'
+        'address = "${newShop.address}"'
         'WHERE id = ${newShop.id}');
     newShop.hasReport = false;
     newShop.isSending = false;
     shops[newShop.id] = newShop;
+    nonReportShops();
+    shopList.notifyListeners();
   }
 
   void deleteShop(int id)
   {
-    _database?.execute('DELETE FROM shop WHERE id = $id');
+    _database?.execute('DELETE FROM travel_shop WHERE id = $id');
     if(shops.containsKey(id)) {
       socketHandler.deleteShop(shops[id]!);
       shops.remove(id);
+      nonReportShops();
+      shopList.notifyListeners();
     }
   }
 
@@ -207,6 +217,8 @@ class SqlFliteDB
       }
       socketHandler.sendShop(temp);
     }
+    nonReportShops();
+    shopList.notifyListeners();
   }
 
   List<InternalShop> getNonHasReport()
@@ -229,6 +241,8 @@ class SqlFliteDB
         dd.isSending = false;
       }
     }
+    nonReportShops();
+    shopList.notifyListeners();
   }
 
   List<InternalShop> getFilteredPoints(SortType type)
@@ -287,8 +301,11 @@ class SqlFliteDB
   {
     for(final id in success){
       shops[id]?.hasReport = true;
-      _database?.execute('UPDATE shop SET has_report=true WHERE id = $id');
+      shops[id]?.isSending = false;
+      _database?.execute('UPDATE travel_shop SET has_report=true WHERE id = $id');
     }
+    nonReportShops();
+    shopList.notifyListeners();
   }
 
   Future<Map<int, InternalShop>> shopFilteredReport(bool hasReport) async
