@@ -10,6 +10,8 @@ double metersInOneAngle = 40075.0 / 360.0 * 1000.0;
 
 class GlobalHandler
 {
+  bool wasHintAnket = false;
+  bool wasNewShopHint = false;
   int userId = 0;
   Point currentUserPoint = const BishkekLocation();
   ValueNotifier<bool> isResendReports = ValueNotifier<bool>(false);

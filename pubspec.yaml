@@ -49,6 +49,7 @@ dependencies:
   open_file: ^3.3.2
   permission_handler: ^11.0.1
   android_intent_plus: ^4.0.3
+  geolocator: ^11.0.0
 
 dev_dependencies:
   flutter_test:

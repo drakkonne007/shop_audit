@@ -47,10 +47,25 @@ class NewShopPage extends StatelessWidget
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Нет названия магазина или не указан тип строения'),duration: Duration(seconds: 2),));
                     }else {
                       int id = await sqlFliteDB.addShop(_textController.text, _character!);
-                      print(id);
                       if(id == 0){
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ошибка добавления магазина!'),duration: Duration(seconds: 2),));
                       }else{
+                        if(!globalHandler.wasNewShopHint){
+                          globalHandler.wasNewShopHint = true;
+                          await showDialog<bool>(
+                            context: context,
+                            builder: (BuildContext context) =>
+                                AlertDialog(
+                                  content: const Text('Фото снаружи, фото названия и анкета обязательны для отправки отчёта!'),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context, true),
+                                      child: const Text('Ок'),
+                                    ),
+                                  ],
+                                ),
+                          );
+                        }
                         Navigator.of(context).popAndPushNamed('/shopPage',arguments: CustomArgument(shopId: id));
                       }
                     }

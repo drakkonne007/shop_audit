@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/global/internalDatabase.dart';
@@ -10,16 +13,16 @@ import 'package:shop_audit/pages/load_splash.dart';
 import 'package:shop_audit/pages/login.dart';
 import 'package:shop_audit/pages/new_shop.dart';
 import 'package:shop_audit/pages/photo_page.dart';
-import 'package:shop_audit/pages/report.dart';
 import 'package:shop_audit/pages/map_screen.dart';
-import 'package:shop_audit/global/database.dart';
 import 'package:shop_audit/pages/shopPage.dart';
 
 SharedPreferences? mainShared;
-const int versionApk = 5;
+const int versionApk = 10;
 GlobalHandler globalHandler = GlobalHandler();
 SocketHandler socketHandler = SocketHandler();
 late SqlFliteDB sqlFliteDB;
+const simplePeriodicTask = "simplePeriodicTask";
+final GeolocatorPlatform geolocatorPlatform = GeolocatorPlatform.instance;
 
 String presentDateTime(DateTime dateTime, {bool seconds = false})
 {
@@ -30,7 +33,8 @@ String presentDateTime(DateTime dateTime, {bool seconds = false})
   return answer;
 }
 
-Future<void> main() async{
+Future<void> main() async
+{
   WidgetsFlutterBinding.ensureInitialized();
   mainShared = await SharedPreferences.getInstance();
   sqlFliteDB = SqlFliteDB();
@@ -69,7 +73,8 @@ class MyApp extends StatelessWidget
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context)
+  {
     return MaterialApp(
       title: 'Yandex Map',
       debugShowCheckedModeBanner: false,

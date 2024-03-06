@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shop_audit/component/internal_shop.dart';
 import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/main.dart';
@@ -46,7 +47,7 @@ class TakePictureScreenState extends State<PhotoPage> {
           title: Text(shop.shopName),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back), onPressed: () {
-            Navigator.of(context).popAndPushNamed('/shopPage',arguments: CustomArgument(shopId: args.shopId));
+            Navigator.of(context).pop();
           },
           )
       ),
@@ -74,8 +75,12 @@ class TakePictureScreenState extends State<PhotoPage> {
               ),
             );
             if(photoPath != ''){
-              sqlFliteDB.setPhoto(args.shopId, args.photoType, photoPath);
-              Navigator.of(context).popAndPushNamed('/shopPage',arguments: CustomArgument(shopId: args.shopId));
+              File photoFile = File(photoPath);
+              var dir = await getApplicationSupportDirectory();
+              String newName = DateTime.now().millisecondsSinceEpoch.toString();
+              photoFile.copySync('${dir.path}/$newName.jpg');
+              sqlFliteDB.setPhoto(args.shopId, args.photoType, '${dir.path}/$newName.jpg');
+              Navigator.of(context).pop();
             }
           } catch (e) {
             print(e);

@@ -9,16 +9,17 @@ EmptySpace? emptySpace;
 ShopType? shopType;
 bool? halal;
 YuridicForm? yuridicForm;
+double? meterSquare;
 
 
 
 class AnketaPage extends StatelessWidget
 {
   final TextEditingController phoneNumber = TextEditingController();
-  final TextEditingController shopSquare = TextEditingController();
   final TextEditingController cassCount = TextEditingController();
   final TextEditingController prodavecCount = TextEditingController();
   final TextEditingController terminals = TextEditingController();
+  final TextEditingController address = TextEditingController();
 
 
   @override
@@ -27,14 +28,15 @@ class AnketaPage extends StatelessWidget
     var args = ModalRoute.of(context)!.settings.arguments as CustomArgument;
     InternalShop shop = sqlFliteDB.shops[args.shopId]!;
     phoneNumber.text = shop.phoneNumber;
-    shopSquare.text = shop.shopSquareMeter.toString();
     cassCount.text = shop.cassCount.toString();
     prodavecCount.text = shop.prodavecManagerCount.toString();
     terminals.text = shop.paymanetTerminal.toString();
+    address.text = shop.address;
     emptySpace = shop.emptySpace;
     shopType = shop.shopType;
     halal = shop.halal;
     yuridicForm = shop.yuridicForm;
+    meterSquare = shop.shopSquareMeter;
 
     return Scaffold(
       appBar: AppBar(
@@ -48,41 +50,61 @@ class AnketaPage extends StatelessWidget
               shop.halal = halal ?? false;
               shop.yuridicForm = yuridicForm ?? YuridicForm.none;
               shop.phoneNumber = phoneNumber.text;
-              shop.shopSquareMeter = double.tryParse(shopSquare.text) ?? 0;
+              shop.address = address.text;
               shop.cassCount = int.tryParse(cassCount.text) ?? 0;
               shop.prodavecManagerCount = int.tryParse(prodavecCount.text) ?? 0;
               shop.paymanetTerminal = int.tryParse(terminals.text) ?? 0;
+              shop.shopSquareMeter = meterSquare ?? 0;
               sqlFliteDB.updateShop(shop);
-              Navigator.of(context).popAndPushNamed('/shopPage',arguments: CustomArgument(shopId: args.shopId));
+              Navigator.of(context).pop();
             }
           )],
           leading: IconButton(
               icon: const Icon(Icons.arrow_back), onPressed: ()async {
-            bool? isExit = await showDialog<bool>(
-              context: context,
-              builder: (BuildContext context) => AlertDialog(
-                content: const Text('Выйти не сохранив?'),
-                actions: <Widget>[
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Нет'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Да'),
-                  ),
-                ],
-              ),
-            );
-            if(isExit != null && isExit){
-              Navigator.of(context).popAndPushNamed('/shopPage',arguments: CustomArgument(shopId: args.shopId));
+            if (!globalHandler.wasHintAnket) {
+              globalHandler.wasHintAnket = true;
+              bool? isExit = await showDialog<bool>(
+                context: context,
+                builder: (BuildContext context) =>
+                    AlertDialog(
+                      content: const Text('Выйти не сохранив?'),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Нет'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Да'),
+                        ),
+                      ],
+                    ),
+              );
+              if (isExit != null && isExit) {
+                Navigator.of(context).pop();
+              }
+            }else{
+              Navigator.of(context).pop();
             }
-
           }
           )
       ),
       body: ListView(
           children: [
+            const Text('Адрес*', textAlign: TextAlign.center,),
+            TextFormField(
+              decoration: InputDecoration(
+                floatingLabelBehavior: FloatingLabelBehavior.never, //Hides label on focus or if filled
+                filled: true, // Needed for adding a fill color
+                fillColor: Colors.orange[200],
+                isDense: true,  // Reduces height a bit
+                border: OutlineInputBorder(
+                  borderSide: BorderSide.none,              // No border
+                  borderRadius: BorderRadius.circular(12),  // Apply corner radius
+                ),
+              ),
+              controller: address,
+            ),
             const Text('Телефонный номер', textAlign: TextAlign.center,),
             TextFormField(
               decoration: InputDecoration(
@@ -97,22 +119,7 @@ class AnketaPage extends StatelessWidget
               ),
               controller: phoneNumber,
             ),
-            const Text('Площадь магазина', textAlign: TextAlign.center,),
-            TextFormField(
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                floatingLabelBehavior: FloatingLabelBehavior.never, //Hides label on focus or if filled
-                filled: true, // Needed for adding a fill color
-                fillColor: Colors.orange[200],
-                isDense: true,  // Reduces height a bit
-                border: OutlineInputBorder(
-                  borderSide: BorderSide.none,              // No border
-                  borderRadius: BorderRadius.circular(12),  // Apply corner radius
-                ),
-              ),
-              controller: shopSquare,
-            ),
-            const Text('Количество касс', textAlign: TextAlign.center,),
+            const Text('Количество касс*', textAlign: TextAlign.center,),
             TextFormField(
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
@@ -127,7 +134,7 @@ class AnketaPage extends StatelessWidget
               ),
               controller: cassCount,
             ),
-            const Text('Количество продавцов', textAlign: TextAlign.center,),
+            const Text('Количество продавцов*', textAlign: TextAlign.center,),
             TextFormField(
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
@@ -166,6 +173,8 @@ class AnketaPage extends StatelessWidget
             const Divider(),
             const HalalRadio(),
             const Divider(),
+            const Text('Размер магазина', textAlign: TextAlign.center,),
+            const MeterRadio(),
           ]
       ),
     );
@@ -371,6 +380,78 @@ class _HalalRadioState extends State<HalalRadio>
             onChanged: (bool? value) {
               setState(() {
                 halal = value;
+              });
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Маленький,
+// Средний,
+// Большой,
+// Супермаркет
+
+class MeterRadio extends StatefulWidget
+{
+  const MeterRadio({super.key});
+  @override
+  State<MeterRadio> createState() => _MeterRadioState();
+}
+
+class _MeterRadioState extends State<MeterRadio>
+{
+  @override
+  Widget build(BuildContext context)
+  {
+    return Column(
+      children: <Widget>[
+        ListTile(
+          title: const Text('Маленький'),
+          leading: Radio<double>(
+            value: 1000,
+            groupValue: meterSquare,
+            onChanged: (double? value) {
+              setState(() {
+                meterSquare = value;
+              });
+            },
+          ),
+        ),
+        ListTile(
+          title: const Text('Средний'),
+          leading: Radio<double>(
+            value: 2000,
+            groupValue: meterSquare,
+            onChanged: (double? value) {
+              setState(() {
+                meterSquare = value;
+              });
+            },
+          ),
+        ),
+        ListTile(
+          title: const Text('Большой'),
+          leading: Radio<double>(
+            value: 3000,
+            groupValue: meterSquare,
+            onChanged: (double? value) {
+              setState(() {
+                meterSquare = value;
+              });
+            },
+          ),
+        ),
+        ListTile(
+          title: const Text('Супермаркет'),
+          leading: Radio<double>(
+            value: 4000,
+            groupValue: meterSquare,
+            onChanged: (double? value) {
+              setState(() {
+                meterSquare = value;
               });
             },
           ),

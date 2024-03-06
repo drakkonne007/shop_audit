@@ -6,7 +6,6 @@ import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shop_audit/component/dynamic_alert_msg.dart';
-import 'package:shop_audit/component/internal_shop.dart';
 import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/global/internalDatabase.dart';
 import 'package:shop_audit/global/socket_handler.dart';
@@ -25,8 +24,6 @@ class MapScreen extends StatefulWidget
 class _MapScreenState extends State<MapScreen>
 {
   YandexMapController? _mapController;
-  Map<int, PlacemarkMapObject> _mapObjects = {};
-  late Timer _timerSelfLocation;
   late Timer _timerSetMyLocation;
   bool _isReconnect = false;
   int _mapIdCluster = 0;
@@ -36,13 +33,11 @@ class _MapScreenState extends State<MapScreen>
   void initState()
   {
     socketHandler.socketState.addListener(checkReconnect);
-    _timerSelfLocation =
-        Timer.periodic(const Duration(seconds: 1), (timer) async {
-          _fetchCurrentLocation();
-        });
-    _timerSetMyLocation = Timer.periodic(const Duration(seconds: 50), (timer) {
-      socketHandler.sendMyPosition(globalHandler.currentUserPoint.latitude,
-          globalHandler.currentUserPoint.longitude);
+    _timerSetMyLocation = Timer.periodic(const Duration(seconds: 50), (timer) async{
+      if(await _fetchCurrentLocation()) {
+        socketHandler.sendMyPosition(globalHandler.currentUserPoint.latitude,
+            globalHandler.currentUserPoint.longitude);
+      }
     });
     socketHandler.getCurrentBuild(_downloadFile);
     socketHandler.loadShops(false);
@@ -73,7 +68,6 @@ class _MapScreenState extends State<MapScreen>
   @override
   void dispose()
   {
-    _timerSelfLocation.cancel();
     _timerSetMyLocation.cancel();
     socketHandler.socketState.removeListener(checkReconnect);
     socketHandler.resendShopList = null;
@@ -230,6 +224,7 @@ class _MapScreenState extends State<MapScreen>
             ElevatedButton(onPressed: () {
               setState(() {
                 sqlFliteDB.nonReportShops();
+                socketHandler.checkLostReports();
               });
             },
                 child: const Icon(Icons.refresh)),
@@ -288,6 +283,11 @@ class _MapScreenState extends State<MapScreen>
                     heroTag: "btn1",
                     child: const Icon(Icons.add_shopping_cart),
                     onPressed: () async {
+                      bool serviceEnabled = await _fetchCurrentLocation();
+                      if(!serviceEnabled){
+                        await geolocatorPlatform.openLocationSettings();
+                        return;
+                      }
                       Navigator.of(context).pushNamed('/newShop');
                     }
                 ),
@@ -384,13 +384,14 @@ class _MapScreenState extends State<MapScreen>
   }
 
   /// Получение текущей геопозиции пользователя
-  Future<void> _fetchCurrentLocation() async
+  Future<bool> _fetchCurrentLocation() async
   {
     var location = await _mapController?.getUserCameraPosition();
     if (location == null) {
-      return;
+      return false;
     }
     globalHandler.currentUserPoint = location.target;
+    return true;
   }
 
   /// Метод для показа текущей позиции

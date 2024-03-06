@@ -169,10 +169,6 @@ class SocketHandler
           socket.write(';shopLabelPhoto=');
           socket.write(File(shop.photoMap['shopLabelPhoto']!).readAsBytesSync());
         }
-        if(File(shop.photoMap['nonAlkoholPhoto']!).existsSync()){
-          socket.write(';nonAlkoholPhoto=');
-          socket.write(File(shop.photoMap['nonAlkoholPhoto']!).readAsBytesSync());
-        }
         if(File(shop.photoMap['alkoholPhoto']!).existsSync()){
           socket.write(';alkoholPhoto=');
           socket.write(File(shop.photoMap['alkoholPhoto']!).readAsBytesSync());
@@ -188,14 +184,6 @@ class SocketHandler
         if(File(shop.photoMap['snack']!).existsSync()){
           socket.write(';snack=');
           socket.write(File(shop.photoMap['snack']!).readAsBytesSync());
-        }
-        if(File(shop.photoMap['konditer']!).existsSync()){
-          socket.write(';konditer=');
-          socket.write(File(shop.photoMap['konditer']!).readAsBytesSync());
-        }
-        if(File(shop.photoMap['konserv']!).existsSync()){
-          socket.write(';konserv=');
-          socket.write(File(shop.photoMap['konserv']!).readAsBytesSync());
         }
         if(File(shop.photoMap['mylomoika']!).existsSync()){
           socket.write(';mylomoika=');
@@ -220,6 +208,62 @@ class SocketHandler
         if(File(shop.photoMap['butter']!).existsSync()){
           socket.write(';butter=');
           socket.write(File(shop.photoMap['butter']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['water']!).existsSync()){
+          socket.write(';water=');
+          socket.write(File(shop.photoMap['water']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['juice']!).existsSync()){
+          socket.write(';juice=');
+          socket.write(File(shop.photoMap['juice']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['gazirovka']!).existsSync()){
+          socket.write(';gazirovka=');
+          socket.write(File(shop.photoMap['gazirovka']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['candyVes']!).existsSync()){
+          socket.write(';candyVes=');
+          socket.write(File(shop.photoMap['candyVes']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['chocolate']!).existsSync()){
+          socket.write(';chocolate=');
+          socket.write(File(shop.photoMap['chocolate']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['korobkaCandy']!).existsSync()){
+          socket.write(';korobkaCandy=');
+          socket.write(File(shop.photoMap['korobkaCandy']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['pirogi']!).existsSync()){
+          socket.write(';pirogi=');
+          socket.write(File(shop.photoMap['pirogi']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['tea']!).existsSync()){
+          socket.write(';tea=');
+          socket.write(File(shop.photoMap['tea']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['coffee']!).existsSync()){
+          socket.write(';coffee=');
+          socket.write(File(shop.photoMap['coffee']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['macarons']!).existsSync()){
+          socket.write(';macarons=');
+          socket.write(File(shop.photoMap['macarons']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['meatKonserv']!).existsSync()){
+          socket.write(';meatKonserv=');
+          socket.write(File(shop.photoMap['meatKonserv']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['fishKonserv']!).existsSync()){
+          socket.write(';fishKonserv=');
+          socket.write(File(shop.photoMap['fishKonserv']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['fruitKonserv']!).existsSync()){
+          socket.write(';fruitKonserv=');
+          socket.write(File(shop.photoMap['fruitKonserv']!).readAsBytesSync());
+        }
+        if(File(shop.photoMap['milkKonserv']!).existsSync()){
+          socket.write(';milkKonserv=');
+          socket.write(File(shop.photoMap['milkKonserv']!).readAsBytesSync());
         }
         socket.write('\x17');
         await socket.flush();
@@ -265,7 +309,7 @@ class SocketHandler
 
   void deleteShop(InternalShop  shop)
   {
-    _sendMessage(text:'deleteShop?userId=${shop.userId};extId=${shop.id};extMillisecs=${shop.millisecsSinceEpoch~/1000}',reload:true);
+    _sendMessage(text:'setDisableShop?userId=${shop.userId};extId=${shop.id};extMillisecs=${shop.millisecsSinceEpoch~/1000}',reload:true);
   }
 
   // void sendReport(List<String> files, String text, int shopId, {int extId=0})

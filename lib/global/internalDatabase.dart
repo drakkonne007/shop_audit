@@ -28,11 +28,25 @@ class SqlFliteDB
   {
     var databasesPath = await getDatabasesPath();
     String path = join(databasesPath, 'internalShops.db');
-    _database = await openDatabase(path, version: 2,
-        onOpen: (Database db) {
+    _database = await openDatabase(path, version: 4,
+        onCreate: (Database db, int v) {
           db.execute('CREATE TABLE IF NOT EXISTS travel_shop '
               '(id INTEGER PRIMARY KEY autoincrement NOT NULL'
               ',user_id INTEGER NOT NULL'
+              ',water TEXT'
+              ',juice TEXT'
+              ',gazirovka TEXT'
+              ',candy_ves TEXT'
+              ',chocolate TEXT'
+              ',korobka_candy TEXT'
+              ',pirogi TEXT'
+              ',tea TEXT'
+              ',coffee TEXT'
+              ',macarons TEXT'
+              ',meat_konserv TEXT'
+              ',fish_konserv TEXT'
+              ',fruit_konserv TEXT'
+              ',milk_konserv TEXT'
               ',shop_name TEXT NOT NULL'
               ',shop_type TEXT'
               ',yuridic_form TEXT'
@@ -43,13 +57,10 @@ class SqlFliteDB
               ',y REAL'
               ',external_photo TEXT'
               ',shop_label_photo TEXT'
-              ',non_alkohol_photo TEXT'
               ',alkohol_photo TEXT'
               ',kolbasa_syr TEXT'
               ',milk TEXT'
               ',snack TEXT'
-              ',konditer TEXT'
-              ',konserv TEXT'
               ',mylomoika TEXT'
               ',vegetables_fruits TEXT'
               ',cigarettes TEXT'
@@ -63,7 +74,7 @@ class SqlFliteDB
               ',halal INTEGER'
               ',paymanet_terminal INTEGER'
               ',empty_space TEXT'
-              ',millisecs_since_epoch INTEGER NOT NULL)');
+              ',millisecs_since_epoch INTEGER NOT NULL);');
         });
     // await _database?.execute('DELETE FROM travel_shop');
     getShops();
@@ -98,18 +109,15 @@ class SqlFliteDB
       InternalShop shop = InternalShop(raw['id'] as int);
       shop.userId = raw['user_id'] as int;
       shop.shopName = raw['shop_name'].toString();
-      shop.address = raw['address'].toString();
+      shop.address = raw['address']== null ? '' : raw['address'].toString();
       shop.xCoord = raw['x'] == null ? 0 : raw['x'] as double;
       shop.yCoord = raw['y'] == null ? 0 : raw['y'] as double;
       shop.photoMap['externalPhoto'] = raw['external_photo'] == null ? '' : raw['external_photo'].toString();
       shop.photoMap['shopLabelPhoto'] = raw['shop_label_photo'] == null ? '' : raw['shop_label_photo'].toString();
-      shop.photoMap['nonAlkoholPhoto'] = raw['non_alkohol_photo'] == null ? '' : raw['non_alkohol_photo'].toString();
       shop.photoMap['alkoholPhoto'] = raw['alkohol_photo'] == null ? '' : raw['alkohol_photo'].toString();
       shop.photoMap['kolbasaSyr'] = raw['kolbasa_syr'] == null ? '' : raw['kolbasa_syr'].toString();
       shop.photoMap['milk'] = raw['milk'] == null ? '' : raw['milk'].toString();
       shop.photoMap['snack'] = raw['snack'] == null ? '' : raw['snack'].toString();
-      shop.photoMap['konditer'] = raw['konditer'] == null ? '' : raw['konditer'].toString();
-      shop.photoMap['konserv'] = raw['konserv'] == null ? '' : raw['konserv'].toString();
       shop.photoMap['mylomoika'] = raw['mylomoika'] == null ? '' : raw['mylomoika'].toString();
       shop.photoMap['vegetablesFruits'] = raw['vegetables_fruits'] == null ? '' : raw['vegetables_fruits'].toString();
       shop.photoMap['cigarettes'] = raw['cigarettes'] == null ? '' : raw['cigarettes'].toString();
@@ -129,6 +137,20 @@ class SqlFliteDB
       shop.emptySpace = raw['empty_space'] == null ? EmptySpace.few : EmptySpace.values.byName(raw['empty_space'].toString());
       shop.yuridicForm = raw['yuridic_form'] == null ? YuridicForm.none : YuridicForm.values.byName(raw['yuridic_form'].toString());
       shop.millisecsSinceEpoch = raw['millisecs_since_epoch'] as int;
+      shop.photoMap['water'] = raw['water'] == null ? '' : raw['water'].toString();
+      shop.photoMap['juice'] = raw['juice'] == null ? '' : raw['juice'].toString();
+      shop.photoMap['gazirovka'] = raw['gazirovka'] == null ? '' : raw['gazirovka'].toString();
+      shop.photoMap['candyVes'] = raw['candy_ves'] == null ? '' : raw['candy_ves'].toString();
+      shop.photoMap['chocolate'] = raw['chocolate'] == null ? '' : raw['chocolate'].toString();
+      shop.photoMap['korobkaCandy'] = raw['korobka_candy'] == null ? '' : raw['korobka_candy'].toString();
+      shop.photoMap['pirogi'] = raw['pirogi'] == null ? '' : raw['pirogi'].toString();
+      shop.photoMap['tea'] = raw['tea'] == null ? '' : raw['tea'].toString();
+      shop.photoMap['coffee'] = raw['coffee'] == null ? '' : raw['coffee'].toString();
+      shop.photoMap['macarons'] = raw['macarons'] == null ? '' : raw['macarons'].toString();
+      shop.photoMap['meatKonserv'] = raw['meat_konserv'] == null ? '' : raw['meat_konserv'].toString();
+      shop.photoMap['fishKonserv'] = raw['fish_konserv'] == null ? '' : raw['fish_konserv'].toString();
+      shop.photoMap['fruitKonserv'] = raw['fruit_konserv'] == null ? '' : raw['fruit_konserv'].toString();
+      shop.photoMap['milkKonserv'] = raw['milk_konserv'] == null ? '' : raw['milk_konserv'].toString();
       temp[shop.id] = shop;
     }
     return temp;
@@ -157,19 +179,34 @@ class SqlFliteDB
 
   void updateShop(InternalShop newShop)
   {
-    _database?.rawUpdate('UPDATE travel_shop SET '
+    if(!shops.containsKey(newShop.id)){
+      return;
+    }
+    _database?.rawUpdate(''
+        'UPDATE travel_shop SET '
         'shop_name = "${newShop.shopName}", '
         'x = ${newShop.xCoord}, '
         'y = ${newShop.yCoord}, '
         'external_photo = "${newShop.photoMap['externalPhoto']}", '
         'shop_label_photo = "${newShop.photoMap['shopLabelPhoto']}", '
-        'non_alkohol_photo = "${newShop.photoMap['nonAlkoholPhoto']}", '
+        'water = "${newShop.photoMap['water']}",'
+        'juice = "${newShop.photoMap['juice']}", '
+        'gazirovka = "${newShop.photoMap['gazirovka']}", '
+        'candy_ves = "${newShop.photoMap['candyVes']}", '
+        'chocolate = "${newShop.photoMap['chocolate']}", '
+        'korobka_candy = "${newShop.photoMap['korobkaCandy']}", '
+        'pirogi = "${newShop.photoMap['pirogi']}", '
+        'tea = "${newShop.photoMap['tea']}", '
+        'coffee = "${newShop.photoMap['coffee']}", '
+        'macarons = "${newShop.photoMap['macarons']}", '
+        'meat_konserv = "${newShop.photoMap['meatKonserv']}", '
+        'fish_konserv = "${newShop.photoMap['fishKonserv']}", '
+        'fruit_konserv = "${newShop.photoMap['fruitKonserv']}", '
+        'milk_konserv = "${newShop.photoMap['milkKonserv']}", '
         'alkohol_photo = "${newShop.photoMap['alkoholPhoto']}", '
         'kolbasa_syr = "${newShop.photoMap['kolbasaSyr']}", '
         'milk = "${newShop.photoMap['milk']}", '
         'snack = "${newShop.photoMap['snack']}", '
-        'konditer = "${newShop.photoMap['konditer']}", '
-        'konserv = "${newShop.photoMap['konserv']}", '
         'mylomoika = "${newShop.photoMap['mylomoika']}", '
         'vegetables_fruits = "${newShop.photoMap['vegetablesFruits']}", '
         'cigarettes = "${newShop.photoMap['cigarettes']}", '
@@ -211,12 +248,15 @@ class SqlFliteDB
   {
     List<InternalShop> temp = [];
     for (final shopTemp in shop) {
-      if (shopTemp.hasReport == false && shopTemp.isSending == false) {
+      if (shopTemp.hasReport == false && shopTemp.isSending == false &&
+          shopTemp.photoMap['externalPhoto'] != '' && shopTemp.photoMap['shopLabelPhoto'] != ''
+          && shopTemp.cassCount != 0 && shopTemp.prodavecManagerCount != 0 && shopTemp.address != '') {
+        _database?.execute('UPDATE travel_shop SET was_sending=true WHERE id=${shopTemp.id}');
         shopTemp.isSending = true;
         temp.add(shopTemp);
       }
-      socketHandler.sendShop(temp);
     }
+    socketHandler.sendShop(temp);
     nonReportShops();
     shopList.notifyListeners();
   }
@@ -238,6 +278,7 @@ class SqlFliteDB
     var list = shops.values.toList(growable: false);
     for(final dd in list){
       if(dd.hasReport == false){
+        _database?.execute('UPDATE travel_shop SET was_sending=false WHERE id=${dd.id}');
         dd.isSending = false;
       }
     }
@@ -302,7 +343,7 @@ class SqlFliteDB
     for(final id in success){
       shops[id]?.hasReport = true;
       shops[id]?.isSending = false;
-      _database?.execute('UPDATE travel_shop SET has_report=true WHERE id = $id');
+      _database?.execute('UPDATE travel_shop SET has_report=true,was_sending=false WHERE id = $id');
     }
     nonReportShops();
     shopList.notifyListeners();
