@@ -11,7 +11,7 @@ class MoscowLocation extends Point
 class BishkekLocation extends Point
 {
   const BishkekLocation({
-    super.latitude = 42.882004,
-    super.longitude = 74.582748,
+    super.latitude = 0,
+    super.longitude = 0,
   });
 }
