@@ -114,6 +114,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.externalPhoto, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.externalPhoto));
                           }
                         }else{
@@ -159,6 +160,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.shopLabelPhoto, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.shopLabelPhoto));
                           }
                         }else{
@@ -208,6 +210,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.alkoholPhoto, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.alkoholPhoto));
                           }
                         }else{
@@ -253,6 +256,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.butter, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.butter));
                           }
                         }else{
@@ -266,7 +270,6 @@ class ShopPage extends StatelessWidget
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     currShop.photoMap['butter']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['butter']!),width: 50,height: 100, filterQuality: FilterQuality.none),
-
                                     const Text('Хлеб'),
                                     IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
                                       bool? isShow = await deletePhoto(context);
@@ -303,6 +306,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.kolbasaSyr, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.kolbasaSyr));
                           }
                         }else{
@@ -348,6 +352,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.milk, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.milk));
                           }
                         }else{
@@ -398,6 +403,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.snack, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.snack));
                           }
                         }else{
@@ -443,6 +449,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.mylomoika, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.mylomoika));
                           }
                         }else{
@@ -493,6 +500,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.vegetablesFruits, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.vegetablesFruits));
                           }
                         }else{
@@ -539,6 +547,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.cigarettes, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.cigarettes));
                           }
                         }else{
@@ -553,7 +562,6 @@ class ShopPage extends StatelessWidget
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     currShop.photoMap['cigarettes']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['cigarettes']!),width: 50,height: 100, filterQuality: FilterQuality.none),
-
                                     const Text('Сигареты'),
                                     IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
                                       bool? isShow = await deletePhoto(context);
@@ -590,6 +598,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.kassovayaZona, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.kassovayaZona));
                           }
                         }else{
@@ -635,6 +644,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.toys, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.toys));
                           }
                         }else{
@@ -648,7 +658,6 @@ class ShopPage extends StatelessWidget
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     currShop.photoMap['toys']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['toys']!),width: 50,height: 100, filterQuality: FilterQuality.none),
-
                                     const Text('Игрушки'),
                                     IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
                                       bool? isShow = await deletePhoto(context);
@@ -686,6 +695,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.water, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.water));
                           }
                         }else{
@@ -731,6 +741,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.juice, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.juice));
                           }
                         }else{
@@ -780,6 +791,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.gazirovka, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.gazirovka));
                           }
                         }else{
@@ -825,6 +837,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.candyVes, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.candyVes));
                           }
                         }else{
@@ -874,6 +887,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.chocolate, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.chocolate));
                           }
                         }else{
@@ -919,6 +933,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.korobkaCandy, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.korobkaCandy));
                           }
                         }else{
@@ -968,6 +983,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.pirogi, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.pirogi));
                           }
                         }else{
@@ -1013,6 +1029,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.tea, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.tea));
                           }
                         }else{
@@ -1064,6 +1081,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.coffee, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.coffee));
                           }
                         }else{
@@ -1077,7 +1095,6 @@ class ShopPage extends StatelessWidget
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     currShop.photoMap['coffee']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['coffee']!),width: 50,height: 100, filterQuality: FilterQuality.none),
-
                                     const Text('Кофе'),
                                     IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
                                       bool? isShow = await deletePhoto(context);
@@ -1109,6 +1126,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.macarons, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.macarons));
                           }
                         }else{
@@ -1158,6 +1176,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.meatKonserv, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.meatKonserv));
                           }
                         }else{
@@ -1171,7 +1190,6 @@ class ShopPage extends StatelessWidget
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     currShop.photoMap['meatKonserv']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['meatKonserv']!),width: 50,height: 100, filterQuality: FilterQuality.none),
-
                                     const Text('Мясные консервы'),
                                     IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
                                       bool? isShow = await deletePhoto(context);
@@ -1203,6 +1221,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.fishKonserv, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.fishKonserv));
                           }
                         }else{
@@ -1216,7 +1235,6 @@ class ShopPage extends StatelessWidget
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     currShop.photoMap['fishKonserv']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['fishKonserv']!),width: 50,height: 100, filterQuality: FilterQuality.none),
-
                                     const Text('Рыбные консервы'),
                                     IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
                                       bool? isShow = await deletePhoto(context);
@@ -1253,6 +1271,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.fruitKonserv, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.fruitKonserv));
                           }
                         }else{
@@ -1298,6 +1317,7 @@ class ShopPage extends StatelessWidget
                             ),
                           );
                           if(isShow != null && isShow){
+                            sqlFliteDB.setPhoto(args.shopId, PhotoType.milkKonserv, '');
                             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: args.shopId, photoType: PhotoType.milkKonserv));
                           }
                         }else{
@@ -1325,7 +1345,6 @@ class ShopPage extends StatelessWidget
                       ),
                     ]
                 ),
-
               ],
             )
           ]

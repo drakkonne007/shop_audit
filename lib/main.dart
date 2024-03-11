@@ -17,12 +17,12 @@ import 'package:shop_audit/pages/map_screen.dart';
 import 'package:shop_audit/pages/shopPage.dart';
 
 SharedPreferences? mainShared;
-const int versionApk = 10;
+const int versionApk = 11;
 GlobalHandler globalHandler = GlobalHandler();
 SocketHandler socketHandler = SocketHandler();
 late SqlFliteDB sqlFliteDB;
-const simplePeriodicTask = "simplePeriodicTask";
 final GeolocatorPlatform geolocatorPlatform = GeolocatorPlatform.instance;
+double meterShop = 1000;
 
 String presentDateTime(DateTime dateTime, {bool seconds = false})
 {

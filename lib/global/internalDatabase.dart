@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -172,6 +173,9 @@ class SqlFliteDB
   {
     var newShop = shops[shopId]!;
     if(newShop.photoMap.containsKey(type.name)) {
+      if(File(newShop.photoMap[type.name]!).existsSync()){
+        File(newShop.photoMap[type.name]!).deleteSync();
+      }
       newShop.photoMap[type.name] = path;
       updateShop(newShop);
     }
@@ -238,6 +242,88 @@ class SqlFliteDB
     _database?.execute('DELETE FROM travel_shop WHERE id = $id');
     if(shops.containsKey(id)) {
       socketHandler.deleteShop(shops[id]!);
+      try {
+        if (File(shops[id]!.photoMap['externalPhoto']!).existsSync()) {
+          File(shops[id]!.photoMap['externalPhoto']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['shopLabelPhoto']!).existsSync()) {
+          File(shops[id]!.photoMap['shopLabelPhoto']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['alkoholPhoto']!).existsSync()) {
+          File(shops[id]!.photoMap['alkoholPhoto']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['kolbasaSyr']!).existsSync()) {
+          File(shops[id]!.photoMap['kolbasaSyr']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['milk']!).existsSync()) {
+          File(shops[id]!.photoMap['milk']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['snack']!).existsSync()) {
+          File(shops[id]!.photoMap['snack']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['mylomoika']!).existsSync()) {
+          File(shops[id]!.photoMap['mylomoika']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['vegetablesFruits']!).existsSync()) {
+          File(shops[id]!.photoMap['vegetablesFruits']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['cigarettes']!).existsSync()) {
+          File(shops[id]!.photoMap['cigarettes']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['kassovayaZona']!).existsSync()) {
+          File(shops[id]!.photoMap['kassovayaZona']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['toys']!).existsSync()) {
+          File(shops[id]!.photoMap['toys']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['butter']!).existsSync()) {
+          File(shops[id]!.photoMap['butter']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['water']!).existsSync()) {
+          File(shops[id]!.photoMap['water']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['juice']!).existsSync()) {
+          File(shops[id]!.photoMap['juice']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['gazirovka']!).existsSync()) {
+          File(shops[id]!.photoMap['gazirovka']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['candyVes']!).existsSync()) {
+          File(shops[id]!.photoMap['candyVes']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['chocolate']!).existsSync()) {
+          File(shops[id]!.photoMap['chocolate']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['korobkaCandy']!).existsSync()) {
+          File(shops[id]!.photoMap['korobkaCandy']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['pirogi']!).existsSync()) {
+          File(shops[id]!.photoMap['pirogi']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['tea']!).existsSync()) {
+          File(shops[id]!.photoMap['tea']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['coffee']!).existsSync()) {
+          File(shops[id]!.photoMap['coffee']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['macarons']!).existsSync()) {
+          File(shops[id]!.photoMap['macarons']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['meatKonserv']!).existsSync()) {
+          File(shops[id]!.photoMap['meatKonserv']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['fishKonserv']!).existsSync()) {
+          File(shops[id]!.photoMap['fishKonserv']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['fruitKonserv']!).existsSync()) {
+          File(shops[id]!.photoMap['fruitKonserv']!).deleteSync();
+        }
+        if (File(shops[id]!.photoMap['milkKonserv']!).existsSync()) {
+          File(shops[id]!.photoMap['milkKonserv']!).deleteSync();
+        }
+      }catch(e){
+       null;
+      }
       shops.remove(id);
       nonReportShops();
       shopList.notifyListeners();

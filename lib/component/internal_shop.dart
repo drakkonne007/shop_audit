@@ -22,6 +22,7 @@ enum YuridicForm
 
 enum PhotoType
 {
+  tempPhoto,
   none,
   externalPhoto,
   shopLabelPhoto,

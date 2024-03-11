@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/material.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shop_audit/component/dynamic_alert_msg.dart';
+import 'package:shop_audit/component/internal_shop.dart';
 import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/global/internalDatabase.dart';
 import 'package:shop_audit/global/socket_handler.dart';
@@ -25,18 +27,48 @@ class _MapScreenState extends State<MapScreen>
 {
   YandexMapController? _mapController;
   late Timer _timerSetMyLocation;
+  late Timer _timerMeterShop;
   bool _isReconnect = false;
   int _mapIdCluster = 0;
   SortType sortType = SortType.none;
+  Point _myLocation = const Point(latitude: 0, longitude: 0);
 
   @override
   void initState()
   {
     socketHandler.socketState.addListener(checkReconnect);
+    socketHandler.getConfigMeterShop();
+    _timerMeterShop = Timer.periodic(const Duration(minutes: 30), (timer) {
+      socketHandler.getConfigMeterShop();
+    });
     _timerSetMyLocation = Timer.periodic(const Duration(seconds: 50), (timer) async{
       if(await _fetchCurrentLocation()) {
         socketHandler.sendMyPosition(globalHandler.currentUserPoint.latitude,
             globalHandler.currentUserPoint.longitude);
+        if(_myLocation.longitude == 0){
+          _myLocation = globalHandler.currentUserPoint;
+        }else{
+         if(pow(_myLocation.latitude - globalHandler.currentUserPoint.latitude,2) + pow(_myLocation.longitude - globalHandler.currentUserPoint.longitude,2) *  metersInOneAngle > meterShop){
+           _myLocation = globalHandler.currentUserPoint;
+           if(context.mounted) {
+             await showDialog<bool>(
+               context: context,
+               builder: (BuildContext context) =>
+                   AlertDialog(
+                     content: const Text(
+                         'Сделайте фото улицы где вы идёте'),
+                     actions: <Widget>[
+                       TextButton(
+                         onPressed: () => Navigator.pop(context, true),
+                         child: const Text('Ок'),
+                       ),
+                     ],
+                   ),
+             );
+             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: -1, photoType: PhotoType.tempPhoto));
+           }
+         }
+        }
       }
     });
     socketHandler.getCurrentBuild(_downloadFile);
@@ -68,6 +100,7 @@ class _MapScreenState extends State<MapScreen>
   @override
   void dispose()
   {
+    _timerMeterShop.cancel();
     _timerSetMyLocation.cancel();
     socketHandler.socketState.removeListener(checkReconnect);
     socketHandler.resendShopList = null;

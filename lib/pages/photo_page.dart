@@ -20,18 +20,6 @@ class TakePictureScreenState extends State<PhotoPage> {
   late Future<void> _initializeControllerFuture;
 
   @override
-  void initState(){
-    _controller = CameraController(
-      CameraHandler().cameras![0],
-      ResolutionPreset.max,
-      enableAudio: false,
-      imageFormatGroup: ImageFormatGroup.jpeg,
-    );
-    _initializeControllerFuture = _controller.initialize();
-    super.initState();
-  }
-
-  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -40,7 +28,28 @@ class TakePictureScreenState extends State<PhotoPage> {
   @override
   Widget build(BuildContext context) {
     final args = ModalRoute.of(context)!.settings.arguments as CustomArgument;
-    InternalShop shop = sqlFliteDB.shops[args.shopId]!;
+    InternalShop shop;
+    if(args.photoType == PhotoType.tempPhoto){
+      photoPath = '';
+      shop = InternalShop(-1);
+      shop.shopName = 'Временное фото';
+      _controller = CameraController(
+        CameraHandler().cameras![0],
+        ResolutionPreset.medium,
+        enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.jpeg,
+      );
+      _initializeControllerFuture = _controller.initialize();
+    }else {
+      _controller = CameraController(
+        CameraHandler().cameras![0],
+        ResolutionPreset.max,
+        enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.jpeg,
+      );
+      _initializeControllerFuture = _controller.initialize();
+      shop = sqlFliteDB.shops[args.shopId]!;
+    }
     return Scaffold(
       appBar: AppBar(
           automaticallyImplyLeading: false,
@@ -75,11 +84,19 @@ class TakePictureScreenState extends State<PhotoPage> {
               ),
             );
             if(photoPath != ''){
-              File photoFile = File(photoPath);
-              var dir = await getApplicationSupportDirectory();
-              String newName = DateTime.now().millisecondsSinceEpoch.toString();
-              photoFile.copySync('${dir.path}/$newName.jpg');
-              sqlFliteDB.setPhoto(args.shopId, args.photoType, '${dir.path}/$newName.jpg');
+              if(args.photoType == PhotoType.tempPhoto){
+                socketHandler.send100MeterPhoto(photoPath);
+              }else {
+                File photoFile = File(photoPath);
+                var dir = await getApplicationSupportDirectory();
+                String newName = DateTime
+                    .now()
+                    .millisecondsSinceEpoch
+                    .toString();
+                photoFile.copySync('${dir.path}/$newName.jpg');
+                sqlFliteDB.setPhoto(
+                    args.shopId, args.photoType, '${dir.path}/$newName.jpg');
+              }
               Navigator.of(context).pop();
             }
           } catch (e) {
