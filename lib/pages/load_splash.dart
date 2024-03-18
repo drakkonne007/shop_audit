@@ -127,18 +127,17 @@ class _LoadSplashState extends State<LoadSplash> {
     }
   }
 
-  Future _askRequiredPermission() async {
-    Map<Permission, PermissionStatus> statuses = await [
+  Future<void> loadDB() async
+  {
+    await [
       Permission.locationAlways,
       Permission.locationWhenInUse,
       Permission.location,
       Permission.accessMediaLocation,
     ].request();
-  }
-
-  Future<void> loadDB() async
-  {
-    await _askRequiredPermission();
+    if(context.mounted) {
+      await _handlePermission(context);
+    }
     String? login = mainShared?.getString('login');
     String? pwd = mainShared?.getString('pwd');
     if(!socketHandler.isLoad) {
@@ -162,7 +161,6 @@ class _LoadSplashState extends State<LoadSplash> {
   @override
   Widget build(BuildContext context)
   {
-    _handlePermission(context);
     isConnect ? {
       loadDB(),
     } : (){};
