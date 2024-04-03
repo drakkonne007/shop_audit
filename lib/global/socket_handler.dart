@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shop_audit/component/internal_shop.dart';
 import 'package:shop_audit/main.dart';
+import 'package:yandex_mapkit/yandex_mapkit.dart';
 
 class Temp
 {
@@ -43,6 +44,7 @@ class SocketHandler
   ValueNotifier<SocketState> socketState = ValueNotifier(SocketState.notInitialize);
   int _id = 0;
   final List<int> _rawBytes = [];
+  List<Point>? _polygonPoints;
 
   Function(bool isLogged)? isLoginFunc;
   Function()? _updateApp;
@@ -114,7 +116,7 @@ class SocketHandler
     for (int i = 2; i < answer.length; i++) {
       var temp = answer[i].split(';');
       if(categories.contains('value')){
-        meterShop = double.tryParse(temp[categories.indexOf('value')]) ?? 1000;
+        meterShop = double.tryParse(temp[categories.indexOf('value')]) ?? 100;
       }
       break;
     }
@@ -127,6 +129,9 @@ class SocketHandler
     }
     if(text.contains('getConfig')){
       _catchConfigMeterShop(text);
+    }
+    if(text.contains('getPolygon')){
+      _catchPolygon(text);
     }
     // if(text.contains('checkReport')){
     //   _catchCheckReport(text);
@@ -176,10 +181,6 @@ class SocketHandler
 
   static void _new100MeterPhoto(Temp temp) async
   {
-    print('hohohofhsoghodsg');
-    print(temp.userId);
-    print(temp.xCoord);
-    print(temp.yCoord);
     try {
       if(File(temp.path).existsSync()){
         Socket socket = await Socket.connect('195.38.167.138', 9891);
@@ -350,6 +351,48 @@ class SocketHandler
     }
   }
 
+  void polygonFromServer()
+  {
+    _sendMessage(text:'getPolygon?userId=${globalHandler.userId}',reload:true);
+  }
+
+  void _catchPolygon(String text)
+  {
+    var answer = text.split('\r');
+    if (answer.length < 3) {
+      return;
+    }
+    var categories = answer[1].split(';');
+    for (int i = 2; i < answer.length;) {
+      var temp = answer[i].split(';');
+      if(categories.contains('coordinates')){
+        String coordinates = temp[categories.indexOf('coordinates')];
+        coordinates = coordinates.replaceAll('{','');
+        coordinates = coordinates.replaceAll('}','');
+        var list = coordinates.split(',');
+        _polygonPoints = [];
+        if(list.length == 4){
+          _polygonPoints?.add(Point(latitude: double.parse(list[0]), longitude: double.parse(list[1])));
+          _polygonPoints?.add(Point(latitude: double.parse(list[0]), longitude: double.parse(list[3])));
+          _polygonPoints?.add(Point(latitude: double.parse(list[2]), longitude: double.parse(list[3])));
+          _polygonPoints?.add(Point(latitude: double.parse(list[2]), longitude: double.parse(list[1])));
+        }else {
+          for (int i = 0; i < list.length - 1; i += 2) {
+            _polygonPoints?.add(Point(latitude: double.parse(temp[i]),
+                longitude: double.parse(temp[i + 1])));
+          }
+        }
+        sqlFliteDB.shopList.notifyListeners();
+      }
+      break;
+    }
+  }
+
+  List<Point>? polygonPoints()
+  {
+    return _polygonPoints;
+  }
+
   void _catchCheckShops(String text) async
   {
     var answer = text.split('\r');
@@ -467,6 +510,7 @@ class SocketHandler
       if(categories.contains('id')){
         int userId = int.parse(temp[categories.indexOf('id')]);
         globalHandler.userId = userId;
+        mainShared?.setString('userId', userId.toString());
         isLogged = true;
       }
       break;

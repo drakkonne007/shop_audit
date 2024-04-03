@@ -26,8 +26,13 @@ async {
   );
 }
 
-class ShopPage extends StatelessWidget
+class ShopPage extends StatefulWidget
 {
+  @override
+  State<ShopPage> createState() => _ShopPageState();
+}
+
+class _ShopPageState extends State<ShopPage> {
   @override
   Widget build(BuildContext context)
   {
@@ -128,14 +133,23 @@ class ShopPage extends StatelessWidget
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     currShop.photoMap['externalPhoto']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['externalPhoto']!),width: 50,height: 100, filterQuality: FilterQuality.none),
-
                                     const Text('Фото снаружи*'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.externalPhoto, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          Container(width: 100,),
+                                          IconButton(
+                                            icon: const Icon(Icons.close_rounded, color: Colors.red,)
+                                            , onPressed: currShop.photoMap['externalPhoto']! == '' ? null : ()async{
+                                            bool? isShow = await deletePhoto(context);
+                                            setState(() {});
+                                            if(isShow != null && isShow){
+                                              sqlFliteDB.setPhoto(args.shopId, PhotoType.externalPhoto, '');
+                                            }
+                                          },)
+                                        ]
+                                    ),
+
                                   ],
                                 );
                               })
@@ -170,20 +184,26 @@ class ShopPage extends StatelessWidget
                           style: const ButtonStyle().copyWith(shape: MaterialStateProperty.all<RoundedRectangleBorder>(const RoundedRectangleBorder()),
                               foregroundBuilder: ((context, state, child){
                                 return Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    currShop.photoMap['shopLabelPhoto']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['shopLabelPhoto']!),width: 50,height: 100, filterQuality: FilterQuality.none),
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      currShop.photoMap['shopLabelPhoto']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['shopLabelPhoto']!),width: 50,height: 100, filterQuality: FilterQuality.none),
 
-                                    const Text('Вывеска*'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.shopLabelPhoto, '');
-                                      }
-                                    })
-                                  ],
-                                );
+                                      const Text('Вывеска*'),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          Container(width: 100,),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,)
+                                              , onPressed: currShop.photoMap['shopLabelPhoto']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.shopLabelPhoto, '');
+                                                }
+                                              }),
+                                        ],
+                                      )
+                                    ]);
                               })
                           )
                       ),
@@ -224,14 +244,24 @@ class ShopPage extends StatelessWidget
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     currShop.photoMap['alkoholPhoto']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['alkoholPhoto']!),width: 50,height: 100, filterQuality: FilterQuality.none),
-
                                     const Text('Алкоголь'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.alkoholPhoto, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.alkoholPhoto, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,)
+                                              , onPressed: currShop.photoMap['alkoholPhoto']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.alkoholPhoto, '');
+                                                }
+                                              }),
+                                        ]),
                                   ],
                                 );
                               })
@@ -266,18 +296,30 @@ class ShopPage extends StatelessWidget
                           style: const ButtonStyle().copyWith(shape: MaterialStateProperty.all<RoundedRectangleBorder>(const RoundedRectangleBorder()),
                               foregroundBuilder: ((context, state, child){
                                 return Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    currShop.photoMap['butter']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['butter']!),width: 50,height: 100, filterQuality: FilterQuality.none),
-                                    const Text('Хлеб'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.butter, '');
-                                      }
-                                    })
-                                  ],
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      currShop.photoMap['butter']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['butter']!),width: 50,height: 100, filterQuality: FilterQuality.none),
+                                      const Text('Хлеб'),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.butter, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,)
+                                              , onPressed: currShop.photoMap['butter']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.butter, '');
+                                                }
+                                              })
+                                        ],
+                                      )
+                                    ]
                                 );
                               })
                           )
@@ -322,12 +364,24 @@ class ShopPage extends StatelessWidget
                                     currShop.photoMap['kolbasaSyr']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['kolbasaSyr']!),width: 50,height: 100, filterQuality: FilterQuality.none),
 
                                     const Text('Колбаса и сыр'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.kolbasaSyr, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.kolbasaSyr, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,)
+                                              , onPressed: currShop.photoMap['kolbasaSyr']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.kolbasaSyr, '');
+                                                }
+                                              })
+                                        ]
+                                    )
                                   ],
                                 );
                               })
@@ -368,12 +422,24 @@ class ShopPage extends StatelessWidget
                                     currShop.photoMap['milk']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['milk']!),width: 50,height: 100, filterQuality: FilterQuality.none),
 
                                     const Text('Молочка'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.milk, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.milk, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,)
+                                              , onPressed:currShop.photoMap['milk']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.milk, '');
+                                                }
+                                              })
+                                        ]
+                                    )
                                   ],
                                 );
                               })
@@ -417,14 +483,26 @@ class ShopPage extends StatelessWidget
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     currShop.photoMap['snack']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['snack']!),width: 50,height: 100, filterQuality: FilterQuality.none),
-
                                     const Text('Снэки'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.snack, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.snack, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(
+                                              icon: const Icon(Icons.close_rounded, color: Colors.red,)
+                                              ,onPressed:currShop.photoMap['snack']! == '' ? null : ()async{
+                                            bool? isShow = await deletePhoto(context);
+                                            if(isShow != null && isShow){
+                                              sqlFliteDB.setPhoto(args.shopId, PhotoType.snack, '');
+                                            }
+                                          })
+                                        ]
+                                    )
                                   ],
                                 );
                               })
@@ -465,12 +543,24 @@ class ShopPage extends StatelessWidget
                                     currShop.photoMap['mylomoika']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['mylomoika']!),width: 50,height: 100, filterQuality: FilterQuality.none),
 
                                     const Text('Мыломойка'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.mylomoika, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.mylomoika, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,),
+                                              onPressed: currShop.photoMap['mylomoika']! == '' ? null :  ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.mylomoika, '');
+                                                }
+                                              })
+                                        ]
+                                    )
                                   ],
                                 );
                               })
@@ -517,12 +607,24 @@ class ShopPage extends StatelessWidget
                                     currShop.photoMap['vegetablesFruits']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['vegetablesFruits']!),width: 50,height: 100, filterQuality: FilterQuality.none),
 
                                     const Text('Фрукты/Овощи'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.vegetablesFruits, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.vegetablesFruits, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,)
+                                              , onPressed:currShop.photoMap['vegetablesFruits']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.vegetablesFruits, '');
+                                                }
+                                              })
+                                        ]
+                                    )
                                   ],
                                 );
                               })
@@ -563,12 +665,24 @@ class ShopPage extends StatelessWidget
                                   children: [
                                     currShop.photoMap['cigarettes']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['cigarettes']!),width: 50,height: 100, filterQuality: FilterQuality.none),
                                     const Text('Сигареты'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.cigarettes, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.cigarettes, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,)
+                                              , onPressed:currShop.photoMap['cigarettes']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.cigarettes, '');
+                                                }
+                                              })
+                                        ]
+                                    )
                                   ],
                                 );
                               })
@@ -614,12 +728,24 @@ class ShopPage extends StatelessWidget
                                     currShop.photoMap['kassovayaZona']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['kassovayaZona']!),width: 50,height: 100, filterQuality: FilterQuality.none),
 
                                     const Text('Касса'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.kassovayaZona, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.kassovayaZona, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,)
+                                              , onPressed:currShop.photoMap['kassovayaZona']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.kassovayaZona, '');
+                                                }
+                                              })
+                                        ]
+                                    )
                                   ],
                                 );
                               })
@@ -659,12 +785,23 @@ class ShopPage extends StatelessWidget
                                   children: [
                                     currShop.photoMap['toys']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['toys']!),width: 50,height: 100, filterQuality: FilterQuality.none),
                                     const Text('Игрушки'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.toys, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.toys, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,)
+                                              , onPressed:currShop.photoMap['toys']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.toys, '');
+                                                }
+                                              })
+                                        ])
                                   ],
                                 );
                               })
@@ -711,12 +848,24 @@ class ShopPage extends StatelessWidget
                                     currShop.photoMap['water']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['water']!),width: 50,height: 100, filterQuality: FilterQuality.none),
 
                                     const Text('Вода'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.water, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.water, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,),
+                                              onPressed:currShop.photoMap['water']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.water, '');
+                                                }
+                                              })
+                                        ]
+                                    )
                                   ],
                                 );
                               })
@@ -757,12 +906,24 @@ class ShopPage extends StatelessWidget
                                     currShop.photoMap['juice']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['juice']!),width: 50,height: 100, filterQuality: FilterQuality.none),
 
                                     const Text('Соки'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.juice, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.juice, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,),
+                                              onPressed:currShop.photoMap['juice']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.juice, '');
+                                                }
+                                              })
+                                        ]
+                                    )
                                   ],
                                 );
                               })
@@ -807,12 +968,24 @@ class ShopPage extends StatelessWidget
                                     currShop.photoMap['gazirovka']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['gazirovka']!),width: 50,height: 100, filterQuality: FilterQuality.none),
 
                                     const Text('Газировка'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.gazirovka, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.gazirovka, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,),
+                                              onPressed:currShop.photoMap['gazirovka']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.gazirovka, '');
+                                                }
+                                              })
+                                        ]
+                                    )
                                   ],
                                 );
                               })
@@ -851,14 +1024,24 @@ class ShopPage extends StatelessWidget
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     currShop.photoMap['candyVes']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['candyVes']!),width: 50,height: 100, filterQuality: FilterQuality.none),
-
                                     const Text('Весовые конфеты'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.candyVes, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.candyVes, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,),
+                                              onPressed:currShop.photoMap['candyVes']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.candyVes, '');
+                                                }
+                                              })
+                                        ])
                                   ],
                                 );
                               })
@@ -903,12 +1086,24 @@ class ShopPage extends StatelessWidget
                                     currShop.photoMap['chocolate']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['chocolate']!),width: 50,height: 100, filterQuality: FilterQuality.none),
 
                                     const Text('Шоколадки'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.chocolate, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.chocolate, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,),
+                                              onPressed:currShop.photoMap['chocolate']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.chocolate, '');
+                                                }
+                                              })
+                                        ]
+                                    )
                                   ],
                                 );
                               })
@@ -949,12 +1144,23 @@ class ShopPage extends StatelessWidget
                                     currShop.photoMap['korobkaCandy']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['korobkaCandy']!),width: 50,height: 100, filterQuality: FilterQuality.none),
 
                                     const Text('Коробочные конфеты'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.korobkaCandy, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.korobkaCandy, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,),
+                                              onPressed:currShop.photoMap['korobkaCandy']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.korobkaCandy, '');
+                                                }
+                                              })
+                                        ])
                                   ],
                                 );
                               })
@@ -969,7 +1175,7 @@ class ShopPage extends StatelessWidget
                           bool? isShow = await showDialog<bool>(
                             context: context,
                             builder: (BuildContext context) => AlertDialog(
-                              content: const Text('Фото пирогов уже есть, хотите перезаписать?'),
+                              content: const Text('Фото вафель уже есть, хотите перезаписать?'),
                               actions: <Widget>[
                                 TextButton(
                                   onPressed: () => Navigator.pop(context, false),
@@ -998,13 +1204,24 @@ class ShopPage extends StatelessWidget
                                   children: [
                                     currShop.photoMap['pirogi']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['pirogi']!),width: 50,height: 100, filterQuality: FilterQuality.none),
 
-                                    const Text('Пироги'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.pirogi, '');
-                                      }
-                                    })
+                                    const Text('Вафли, булочки, кексы'),
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.pirogi, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,)
+                                              , onPressed:currShop.photoMap['pirogi']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.pirogi, '');
+                                                }
+                                              })
+                                        ])
                                   ],
                                 );
                               })
@@ -1045,12 +1262,23 @@ class ShopPage extends StatelessWidget
                                     currShop.photoMap['tea']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['tea']!),width: 50,height: 100, filterQuality: FilterQuality.none),
 
                                     const Text('Чай'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.tea, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.tea, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,),
+                                              onPressed:currShop.photoMap['tea']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.tea, '');
+                                                }
+                                              })
+                                        ])
                                   ],
                                 );
                               })
@@ -1096,12 +1324,23 @@ class ShopPage extends StatelessWidget
                                   children: [
                                     currShop.photoMap['coffee']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['coffee']!),width: 50,height: 100, filterQuality: FilterQuality.none),
                                     const Text('Кофе'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.coffee, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.coffee, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,),
+                                              onPressed:currShop.photoMap['coffee']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.coffee, '');
+                                                }
+                                              })
+                                        ])
                                   ],
                                 );
                               })
@@ -1142,12 +1381,23 @@ class ShopPage extends StatelessWidget
                                     currShop.photoMap['macarons']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['macarons']!),width: 50,height: 100, filterQuality: FilterQuality.none),
 
                                     const Text('Макароны'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.macarons, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.macarons, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,),
+                                              onPressed:currShop.photoMap['macarons']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.macarons, '');
+                                                }
+                                              })
+                                        ])
                                   ],
                                 );
                               })
@@ -1191,12 +1441,23 @@ class ShopPage extends StatelessWidget
                                   children: [
                                     currShop.photoMap['meatKonserv']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['meatKonserv']!),width: 50,height: 100, filterQuality: FilterQuality.none),
                                     const Text('Мясные консервы'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.meatKonserv, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.meatKonserv, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,),
+                                              onPressed:currShop.photoMap['meatKonserv']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.meatKonserv, '');
+                                                }
+                                              })
+                                        ])
                                   ],
                                 );
                               })
@@ -1236,12 +1497,23 @@ class ShopPage extends StatelessWidget
                                   children: [
                                     currShop.photoMap['fishKonserv']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['fishKonserv']!),width: 50,height: 100, filterQuality: FilterQuality.none),
                                     const Text('Рыбные консервы'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.fishKonserv, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.fishKonserv, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,),
+                                              onPressed:currShop.photoMap['fishKonserv']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.fishKonserv, '');
+                                                }
+                                              })
+                                        ])
                                   ],
                                 );
                               })
@@ -1287,12 +1559,23 @@ class ShopPage extends StatelessWidget
                                     currShop.photoMap['fruitKonserv']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['fruitKonserv']!),width: 50,height: 100, filterQuality: FilterQuality.none),
 
                                     const Text('Фруктовые/овощные консервы'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.fruitKonserv, '');
-                                      }
-                                    })
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.fruitKonserv, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,),
+                                              onPressed:currShop.photoMap['fruitKonserv']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.fruitKonserv, '');
+                                                }
+                                              })
+                                        ])
                                   ],
                                 );
                               })
@@ -1331,13 +1614,24 @@ class ShopPage extends StatelessWidget
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     currShop.photoMap['milkKonserv']! == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.photoMap['milkKonserv']!),width: 50,height: 100, filterQuality: FilterQuality.none),
-                                    const Text('Молочные консервы'),
-                                    IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,), onPressed: ()async{
-                                      bool? isShow = await deletePhoto(context);
-                                      if(isShow != null && isShow){
-                                        sqlFliteDB.setPhoto(args.shopId, PhotoType.milkKonserv, '');
-                                      }
-                                    })
+                                    const Text('Сгущёнка'),
+                                    Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children:[
+                                          IconButton(
+                                            icon: const Icon(Icons.check_rounded, color: Colors.green,)
+                                            , onPressed: (){
+                                            sqlFliteDB.setPhoto(args.shopId, PhotoType.milkKonserv, 'yes');
+                                            setState((){});
+                                          },),
+                                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.red,),
+                                              onPressed:currShop.photoMap['milkKonserv']! == '' ? null : ()async{
+                                                bool? isShow = await deletePhoto(context);
+                                                if(isShow != null && isShow){
+                                                  sqlFliteDB.setPhoto(args.shopId, PhotoType.milkKonserv, '');
+                                                }
+                                              })
+                                        ])
                                   ],
                                 );
                               })

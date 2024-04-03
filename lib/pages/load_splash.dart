@@ -120,6 +120,7 @@ class _LoadSplashState extends State<LoadSplash> {
   {
     socketHandler.isLoginFunc = null;
     if(result){
+      initializeService();
       Navigator.of(context).pushNamedAndRemoveUntil(
           '/mapScreen', (route) => false);
     }else{

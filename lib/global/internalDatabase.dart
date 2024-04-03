@@ -173,10 +173,14 @@ class SqlFliteDB
   {
     var newShop = shops[shopId]!;
     if(newShop.photoMap.containsKey(type.name)) {
-      if(File(newShop.photoMap[type.name]!).existsSync()){
+      if(File(newShop.photoMap[type.name]!).existsSync() && !newShop.photoMap[type.name]!.contains('greenGalk')){
         File(newShop.photoMap[type.name]!).deleteSync();
       }
-      newShop.photoMap[type.name] = path;
+      if(path == 'yes'){
+        newShop.photoMap[type.name] = mainShared?.getString('greenGalk') ?? '';
+      }else {
+        newShop.photoMap[type.name] = path;
+      }
       updateShop(newShop);
     }
   }

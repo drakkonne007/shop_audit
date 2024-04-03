@@ -361,7 +361,7 @@ class _HalalRadioState extends State<HalalRadio>
     return Column(
       children: <Widget>[
         ListTile(
-          title: const Text('Халал (есть сигареты и алкоголь)'),
+          title: const Text('Халал (нет сигарет и алкоголя)'),
           leading: Radio<bool>(
             value: true,
             groupValue: halal,
@@ -373,7 +373,7 @@ class _HalalRadioState extends State<HalalRadio>
           ),
         ),
         ListTile(
-          title: const Text('Не халал'),
+          title: const Text('Не халал (есть сигареты и алкоголь)'),
           leading: Radio<bool>(
             value: false,
             groupValue: halal,

@@ -1,8 +1,13 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/global/internalDatabase.dart';
@@ -15,14 +20,15 @@ import 'package:shop_audit/pages/new_shop.dart';
 import 'package:shop_audit/pages/photo_page.dart';
 import 'package:shop_audit/pages/map_screen.dart';
 import 'package:shop_audit/pages/shopPage.dart';
+import 'package:yandex_mapkit/yandex_mapkit.dart';
 
+const int versionApk = 31;
 SharedPreferences? mainShared;
-const int versionApk = 11;
 GlobalHandler globalHandler = GlobalHandler();
 SocketHandler socketHandler = SocketHandler();
 late SqlFliteDB sqlFliteDB;
 final GeolocatorPlatform geolocatorPlatform = GeolocatorPlatform.instance;
-double meterShop = 1000;
+double meterShop = 100;
 
 String presentDateTime(DateTime dateTime, {bool seconds = false})
 {
@@ -45,6 +51,17 @@ Future<void> main() async
   //   await DatabaseClient().getReverseShopPoints();
   // }
   // exit(0);
+  mainShared?.setBool('onRoute', false);
+  var bytes = await rootBundle.load('assets/greenGalk.png');
+  var dir = await getApplicationSupportDirectory();
+  File file = File('${dir.path}/greenGalk.png');
+  if(!file.existsSync()){
+    file.createSync();
+    file.openSync(mode: FileMode.write);
+    file.writeAsBytesSync(bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes));
+    file.path;
+    mainShared?.setString('greenGalk', '${dir.path}/greenGalk.png');
+  }
   runApp(const MyApp());
 }
 
@@ -97,4 +114,53 @@ class MyApp extends StatelessWidget
       },
     );
   }
+}
+// this will be used as notification channel id
+// const notificationChannelId = 'my_foreground';
+
+// this will be used for notification id, So you can update your custom notification with this id.
+// const notificationId = 888;
+
+Future<void> initializeService() async {
+  final service = FlutterBackgroundService();
+  await service.configure(
+      androidConfiguration: AndroidConfiguration(
+        onStart: onStart,
+        autoStart: true,
+        isForegroundMode: true,
+      ),
+      iosConfiguration: IosConfiguration());
+}
+
+@pragma('vm:entry-point')
+Future<void> onStart(ServiceInstance service) async {
+  DartPluginRegistrant.ensureInitialized();
+  final GeolocatorPlatform geolocatorPlatform = GeolocatorPlatform.instance;
+  var shared =  await SharedPreferences.getInstance();
+  Position? myLocation;
+  Timer.periodic(const Duration(seconds: 50), (timer) async {
+    shared.reload();
+    bool isLoad =  shared.getBool('onRoute') ?? false;
+    if(!isLoad){
+      return;
+    }
+    if(myLocation == null){
+      myLocation = await geolocatorPlatform.getCurrentPosition();
+      Socket socket = await Socket.connect('195.38.167.138', 9891);
+      socket.write('auditor:12345\x17');
+      socket.write('id=10;reload=true;setCurrPosition?userId=${shared.getString('userId')};xCoord=${myLocation!.latitude};yCoord=${myLocation!.longitude};dtime=${(DateTime.now().millisecondsSinceEpoch ~/ 1000)}\x17');
+      socket.close();
+      return;
+    }
+    var locPos = await geolocatorPlatform.getCurrentPosition();
+    var distance = Geolocator.distanceBetween(myLocation!.latitude, myLocation!.longitude, locPos.latitude, locPos.longitude);
+    if(distance < 70){
+      return;
+    }
+    myLocation = locPos;
+    Socket socket = await Socket.connect('195.38.167.138', 9891);
+    socket.write('auditor:12345\x17');
+    socket.write('id=10;reload=true;setCurrPosition?userId=${shared.getString('userId')};xCoord=${locPos.latitude};yCoord=${locPos.longitude};dtime=${(DateTime.now().millisecondsSinceEpoch ~/ 1000)}\x17');
+    socket.close();
+  });
 }

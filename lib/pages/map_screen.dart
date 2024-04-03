@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -38,36 +39,37 @@ class _MapScreenState extends State<MapScreen>
   {
     socketHandler.socketState.addListener(checkReconnect);
     socketHandler.getConfigMeterShop();
+    socketHandler.polygonFromServer();
     _timerMeterShop = Timer.periodic(const Duration(minutes: 30), (timer) {
       socketHandler.getConfigMeterShop();
     });
-    _timerSetMyLocation = Timer.periodic(const Duration(seconds: 50), (timer) async{
+    _timerSetMyLocation = Timer.periodic(const Duration(seconds: 10), (timer) async{
       if(await _fetchCurrentLocation()) {
-        socketHandler.sendMyPosition(globalHandler.currentUserPoint.latitude,
-            globalHandler.currentUserPoint.longitude);
+        // socketHandler.sendMyPosition(globalHandler.currentUserPoint.latitude,
+        //     globalHandler.currentUserPoint.longitude);
         if(_myLocation.longitude == 0){
           _myLocation = globalHandler.currentUserPoint;
         }else{
-         if(pow(_myLocation.latitude - globalHandler.currentUserPoint.latitude,2) + pow(_myLocation.longitude - globalHandler.currentUserPoint.longitude,2) *  metersInOneAngle > meterShop){
-           _myLocation = globalHandler.currentUserPoint;
-           if(context.mounted) {
-             await showDialog<bool>(
-               context: context,
-               builder: (BuildContext context) =>
-                   AlertDialog(
-                     content: const Text(
-                         'Сделайте фото улицы где вы идёте'),
-                     actions: <Widget>[
-                       TextButton(
-                         onPressed: () => Navigator.pop(context, true),
-                         child: const Text('Ок'),
-                       ),
-                     ],
-                   ),
-             );
-             Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: -1, photoType: PhotoType.tempPhoto));
-           }
-         }
+          if(Geolocator.distanceBetween(_myLocation.latitude, _myLocation.longitude, globalHandler.currentUserPoint.latitude, globalHandler.currentUserPoint.longitude) > meterShop){
+            _myLocation = globalHandler.currentUserPoint;
+            if(context.mounted) {
+              await showDialog<bool>(
+                context: context,
+                builder: (BuildContext context) =>
+                    AlertDialog(
+                      content: const Text(
+                          'Сделайте фото улицы где вы идёте'),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Ок'),
+                        ),
+                      ],
+                    ),
+              );
+              Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: -1, photoType: PhotoType.tempPhoto));
+            }
+          }
         }
       }
     });
@@ -249,18 +251,35 @@ class _MapScreenState extends State<MapScreen>
         appBar: AppBar(
           actions: [
             Expanded(
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.max,
-                  children:[
-                    Text('${sqlFliteDB.hasReportCount} отчётов из ${sqlFliteDB.shops.length}'),]),),
-            ElevatedButton(onPressed: () {
-              setState(() {
-                sqlFliteDB.nonReportShops();
-                socketHandler.checkLostReports();
-              });
-            },
-                child: const Icon(Icons.refresh)),
+                child: Row(
+                    mainAxisSize: MainAxisSize.max,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children:[
+                      const SizedBox(width: 30,),
+                      ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              bool onRoute = mainShared?.getBool('onRoute') ?? false;
+                              mainShared?.setBool('onRoute', !onRoute);
+                            });
+                          },
+                          style: mainShared?.getBool('onRoute') ?? false ? ButtonStyle(
+                              backgroundColor:  MaterialStateProperty.all(Colors.green)) : const ButtonStyle(),
+                          child: mainShared?.getBool('onRoute') ?? false ? const Text('Стоп') : const Text('Старт')
+                      ),
+                      Text('${sqlFliteDB.hasReportCount} отчётов из ${sqlFliteDB.shops.length}'),
+                      ElevatedButton(onPressed: () {
+                        setState(() {
+                          sqlFliteDB.nonReportShops();
+                          socketHandler.checkLostReports();
+                          socketHandler.polygonFromServer();
+                        });
+                      },
+                          child: const Icon(Icons.refresh)),
+                    ]
+                )
+            )
             // ElevatedButton(onPressed: () async {
             //   _refreshActiveShops();
             //   switch (_activeShops.length) {
@@ -298,12 +317,22 @@ class _MapScreenState extends State<MapScreen>
         body: Stack(
             fit: StackFit.passthrough,
             children: [
-
               YandexMap(
                 mode2DEnabled: true,
                 tiltGesturesEnabled: false,
                 mapObjects: [
-                  _getClusterizedCollection()
+                  _getClusterizedCollection(),
+                   PolygonMapObject(
+                    mapId: MapObjectId(_getUUID().toString()),
+                    polygon: Polygon(
+                        outerRing: LinearRing(points: socketHandler.polygonPoints() ?? const []
+                        ),
+                        innerRings: const []
+                    ),
+                    strokeColor: const Color(0x20F0000),
+                    strokeWidth: 3.0,
+                    fillColor: const Color(0x20FF0000),
+                  )
                 ],
                 onMapCreated: (controller) {
                   _mapController = controller;
@@ -316,11 +345,20 @@ class _MapScreenState extends State<MapScreen>
                     heroTag: "btn1",
                     child: const Icon(Icons.add_shopping_cart),
                     onPressed: () async {
-                      bool serviceEnabled = await _fetchCurrentLocation();
-                      if(!serviceEnabled){
-                        await geolocatorPlatform.openLocationSettings();
+                      bool onRoute = mainShared?.getBool('onRoute') ?? false;
+                      if(!onRoute){
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Начните маршрут!'),
+                            )
+                        );
                         return;
                       }
+                      // bool serviceEnabled = await _fetchCurrentLocation();
+                      // if(!serviceEnabled){
+                      //   await geolocatorPlatform.openLocationSettings();
+                      //   return;
+                      // }
                       Navigator.of(context).pushNamed('/newShop');
                     }
                 ),
