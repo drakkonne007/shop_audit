@@ -214,7 +214,7 @@ class _MapScreenState extends State<MapScreen>
                                               onPressed:(){
                                                 Navigator.of(context).pushNamed('/shopPage', arguments: CustomArgument(shopId: allList[index].id));
                                               },
-                                              child: Text(allList[index].shopName.trim(),
+                                              child: Text(allList[index].shopName.trim() + "\n" + presentDateTime(DateTime.fromMillisecondsSinceEpoch(allList[index].millisecsSinceEpoch)),
                                                   style: const TextStyle(
                                                       color: Colors.black)
                                               ))
@@ -242,9 +242,16 @@ class _MapScreenState extends State<MapScreen>
                           }
                       )
                   ),
-                  IconButton(onPressed: () {
-                    _logOut(context);
-                  }, icon: const Icon(Icons.logout_outlined))
+                  Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children:[
+                        IconButton(onPressed: () {
+                          _logOut(context);
+                        }, icon: const Icon(Icons.logout_outlined))
+                        , const Text('Версия $versionApk  ')
+                      ]
+                  )
+
                 ]
             )
         ),
@@ -322,7 +329,7 @@ class _MapScreenState extends State<MapScreen>
                 tiltGesturesEnabled: false,
                 mapObjects: [
                   _getClusterizedCollection(),
-                   PolygonMapObject(
+                  PolygonMapObject(
                     mapId: MapObjectId(_getUUID().toString()),
                     polygon: Polygon(
                         outerRing: LinearRing(points: socketHandler.polygonPoints() ?? const []

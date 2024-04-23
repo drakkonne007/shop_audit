@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -20,9 +19,8 @@ import 'package:shop_audit/pages/new_shop.dart';
 import 'package:shop_audit/pages/photo_page.dart';
 import 'package:shop_audit/pages/map_screen.dart';
 import 'package:shop_audit/pages/shopPage.dart';
-import 'package:yandex_mapkit/yandex_mapkit.dart';
 
-const int versionApk = 31;
+const int versionApk = 32;
 SharedPreferences? mainShared;
 GlobalHandler globalHandler = GlobalHandler();
 SocketHandler socketHandler = SocketHandler();
@@ -32,7 +30,7 @@ double meterShop = 100;
 
 String presentDateTime(DateTime dateTime, {bool seconds = false})
 {
-  String answer = '${dateTime.year}.${dateTime.month}.${dateTime.day} ${dateTime.hour}:${dateTime.minute}';
+  String answer = '${dateTime.year}.${dateTime.month < 10 ? '0${dateTime.month}' : dateTime.month}.${dateTime.day < 10 ? '0${dateTime.day}' : dateTime.day} ${dateTime.hour}:${dateTime.minute}';
   if(seconds){
     answer += ':${dateTime.second}';
   }

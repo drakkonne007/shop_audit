@@ -43,7 +43,7 @@ class TakePictureScreenState extends State<PhotoPage> {
     }else {
       _controller = CameraController(
         CameraHandler().cameras![0],
-        ResolutionPreset.max,
+        ResolutionPreset.high,
         enableAudio: false,
         imageFormatGroup: ImageFormatGroup.jpeg,
       );

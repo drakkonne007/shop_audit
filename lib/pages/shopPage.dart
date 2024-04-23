@@ -43,8 +43,30 @@ class _ShopPageState extends State<ShopPage> {
           title: Text(currShop.shopName),
           actions: [
             ElevatedButton(
-              child: const Text('Отослать'),
-              onPressed: currShop.hasReport ? null : () async{
+              child: Text(currShop.hasReport ? 'Переотправить' :  'Отослать'),
+              onPressed: () async{
+                if(currShop.hasReport){
+                  bool? isNeed = await showDialog<bool>(
+                    context: context,
+                    builder: (BuildContext context) => AlertDialog(
+                      content: const Text('Переотправить отчёт?'),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Нет'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Да'),
+                        ),
+                      ],
+                    ),
+                  );
+                  isNeed ??= false;
+                  if(!isNeed){
+                    return;
+                  }
+                }
                 if(currShop.photoMap['externalPhoto'] == '' || currShop.photoMap['shopLabelPhoto'] == ''
                     || currShop.cassCount == 0 || currShop.prodavecManagerCount == 0 || currShop.address == ''){
                   await showDialog<bool>(
