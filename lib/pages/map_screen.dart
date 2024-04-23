@@ -91,6 +91,10 @@ class _MapScreenState extends State<MapScreen>
   {
     var dir = await getExternalCacheDirectories();
     File file = File('${dir![0].path}/SmartConSol.apk');
+    if(file.existsSync()){
+      file.deleteSync();
+    }
+    file.createSync();
     String myUrl = 'http://shop-audit.icu/pages/apk_page/SmartConSol.apk';
     var res = await get(Uri.parse(myUrl));
     await file.writeAsBytes(res.bodyBytes);
