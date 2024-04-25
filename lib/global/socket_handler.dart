@@ -60,6 +60,7 @@ class SocketHandler
     try {
       isLoading = false;
       _socket = await Socket.connect('195.38.167.138', 9891);
+      //_socket = await Socket.connect('http://shop-audit.icu', 9891);
       // _socket = await Socket.connect('10.11.100.189', 9891);
       _socket.listen(_dataRecive,
           onDone: () {

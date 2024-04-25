@@ -4,6 +4,8 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+
+
 def localProperties = new Properties()
 def localPropertiesFile = rootProject.file('local.properties')
 if (localPropertiesFile.exists()) {
@@ -11,6 +13,11 @@ if (localPropertiesFile.exists()) {
         localProperties.load(reader)
     }
 }
+
+def keystorePropertiesFile = rootProject.file('key.properties')
+ if (keystorePropertiesFile.exists()) {
+     localProperties.load(new FileInputStream(keystorePropertiesFile))
+ }
 
 def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
 if (flutterVersionCode == null) {
@@ -51,11 +58,26 @@ android {
         versionName flutterVersionName
     }
 
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                keyAlias localProperties['keyAlias']
+                keyPassword localProperties['keyPassword']
+                storeFile file(localProperties['storeFile'])
+                storePassword localProperties['storePassword']
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig signingConfigs.debug
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+                println "Signing with key.properties"
+            } else {
+                signingConfig signingConfigs.debug
+                println "Signing with debug keys"
+            }
         }
     }
 }
