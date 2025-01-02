@@ -11,7 +11,7 @@ class DatabaseClient
   }
   DatabaseClient._internal();
 
-  var connection = PostgreSQLConnection("195.38.167.138", 5432, "shop_audit_clear", username: "shop_audit", password: "123", allowClearTextPassword: true);
+  var connection = PostgreSQLConnection("195.38.167.138", 5432, "travel_shop", username: "shop_audit", password: "danbass007007", allowClearTextPassword: true);
   int auditorId = 0;
 
   Future<bool> openDB()async
@@ -25,7 +25,7 @@ class DatabaseClient
 
   Future getReverseShopPoints() async
   {
-    String quer = r'SELECT id,x,y FROM shop_audit_clear.shop WHERE address IS NULL';
+    String quer = 'SELECT id,x,y FROM travel_shop.travel_shop WHERE yandex_address = \'\'';
     var result = await connection.query(quer);
     var columnNames = result.columnDescriptions;
     Map<String,int> map = {};
