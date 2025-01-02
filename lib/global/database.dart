@@ -48,7 +48,7 @@ class DatabaseClient
       if(ss.items?[0].toponymMetadata == null || ss.items == null){
         continue;
       }
-      connection.execute('UPDATE shop_audit_clear.shop SET address = \'${ss.items?[0].toponymMetadata!.address.formattedAddress}\' WHERE id = ${row[map['id']!]}');
+      connection.execute('UPDATE travel_shop.travel_shop SET yandex_address = \'${ss.items?[0].toponymMetadata!.address.formattedAddress}\' WHERE id = ${row[map['id']!]}');
       print(ss.items?[0].toponymMetadata!.address.formattedAddress);
     }
   }

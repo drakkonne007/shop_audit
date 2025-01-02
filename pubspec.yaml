@@ -51,6 +51,7 @@ dependencies:
   android_intent_plus: ^4.0.3
   geolocator: ^11.0.0
   flutter_background_service: ^5.0.5
+  win32: ^5.5.4
 
 dev_dependencies:
   flutter_test:
