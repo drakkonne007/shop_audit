@@ -22,7 +22,7 @@ enum YuridicForm
 
 enum PhotoType
 {
-  tempPhoto,
+  reportPhoto,
   none,
   externalPhoto,
   shopLabelPhoto,
@@ -59,8 +59,12 @@ class InternalShop
   int userId = 0;
   String shopName = '';
   double xCoord = 0, yCoord = 0;
+  bool isReport = false;
+  String folderPath = '';
   String address = '';
+  String yandexAddress = '';
   ShopType shopType = ShopType.none;
+  String reportPhoto = '';
   final Map<String,String> photoMap = {
     'water' : '',
     'juice' : '',

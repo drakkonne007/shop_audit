@@ -1,10 +1,19 @@
 
 
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shop_audit/component/internal_shop.dart';
 import 'package:shop_audit/component/location.dart';
 import 'package:yandex_mapkit/yandex_mapkit.dart';
+
+
+Widget getPhotoUniversal(String photoPath, String rootPath, Size size)
+{
+  return File(photoPath).existsSync() ? Image.file(File(photoPath),width: size.width,height: size.height, filterQuality: FilterQuality.none)
+      : Image.network(rootPath + '/' + photoPath,width: size.width,height: size.height, filterQuality: FilterQuality.none, errorBuilder: (context, error, stackTrace) => SizedBox(width: size.width,height: size.height),);
+}
 
 double metersInOneAngle = 40075.0 / 360.0 * 1000.0;
 
@@ -19,10 +28,11 @@ class GlobalHandler
 
 class CustomArgument
 {
-  CustomArgument({required this.shopId, this.photoPath = '', this.photoType = PhotoType.none});
+  CustomArgument({required this.shopId, this.photoPath = '', this.photoType = PhotoType.none, this.isFromReport = false});
   String photoPath = '';
   int shopId=0;
   PhotoType photoType;
+  bool isFromReport = false;
 }
 
 final defaultNoneButtonStyle = ButtonStyle(

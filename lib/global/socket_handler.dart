@@ -46,6 +46,8 @@ class SocketHandler
   final List<int> _rawBytes = [];
   List<Point>? _polygonPoints;
 
+
+
   Function(bool isLogged)? isLoginFunc;
   Function()? _updateApp;
   Function(List<String>)? resendShopList;
@@ -134,6 +136,9 @@ class SocketHandler
     if(text.contains('getPolygon')){
       _catchPolygon(text);
     }
+    if(text.contains('tasks')){
+      _catchTasks(text);
+    }
     // if(text.contains('checkReport')){
     //   _catchCheckReport(text);
     // }
@@ -151,7 +156,86 @@ class SocketHandler
     }
   }
 
+  void _catchTasks(String text)
+  {
+    return;
+    var answer = text.split('\r');
+    if (answer.length < 3) {
+      return;
+    }
+    var categories = answer[1].split(';');
+    Map<int,Map<int, InternalShop>> _tasksOnWeek = {};
+    for (int i = 2; i < answer.length; i++) {
+      var raw = answer[i].split(';');
+      InternalShop shop = InternalShop(int.tryParse(raw[categories.indexOf('shop_id')]) ?? 0);
+      shop.isReport = true;
+
+      // try {
+        shop.userId = int.parse(raw[categories.indexOf('user_id')].toString());
+        shop.shopName = raw[categories.indexOf('shop_name')].toString();
+        shop.address = raw[categories.indexOf('address')].toString();
+        shop.xCoord = double.parse(raw[categories.indexOf('x')]);
+        shop.yCoord = double.parse(raw[categories.indexOf('y')]);
+        shop.folderPath = raw[categories.indexOf('folder_path')].toString();
+        shop.photoMap['externalPhoto'] = raw[categories.indexOf('external_photo')].toString();
+        shop.photoMap['shopLabelPhoto'] = raw[categories.indexOf('shop_label_photo')].toString();
+        shop.photoMap['alkoholPhoto'] = raw[categories.indexOf('alkohol_photo')].toString();
+        shop.photoMap['kolbasaSyr'] = raw[categories.indexOf('kolbasa_syr')].toString();
+        shop.photoMap['milk'] = raw[categories.indexOf('milk')].toString();
+        shop.photoMap['snack'] = raw[categories.indexOf('snack')].toString();
+        shop.photoMap['mylomoika'] = raw[categories.indexOf('mylomoika')].toString();
+        shop.photoMap['vegetablesFruits'] = raw[categories.indexOf('vegetables_fruits')].toString();
+        shop.photoMap['cigarettes'] = raw[categories.indexOf('cigarettes')].toString();
+        shop.photoMap['kassovayaZona'] = raw[categories.indexOf('kassovaya_zona')].toString();
+        shop.photoMap['toys'] = raw[categories.indexOf('toys')].toString();
+        shop.photoMap['butter'] = !categories.contains('butter') ? '' : raw[categories.indexOf('butter')].toString();
+        shop.phoneNumber = raw[categories.indexOf('phone_number')].toString();
+        shop.shopSquareMeter = double.tryParse(raw[categories.indexOf('shop_square_meter')]) ?? 0;
+        shop.hasReport = raw[categories.indexOf('has_report')]  == '1';
+        shop.isSending = raw[categories.indexOf('was_sending')] == '1';
+        shop.millisecsSinceEpoch = int.tryParse(raw[categories.indexOf('millisecs_since_epoch')]) ?? 0;
+        shop.shopType = ShopType.values.byName(raw[categories.indexOf('shop_type')].toString());
+        shop.cassCount = int.tryParse(raw[categories.indexOf('cass_count')]) ?? 0;
+        shop.prodavecManagerCount = int.tryParse(raw[categories.indexOf('prodavec_manager_count')]) ?? 0;
+        shop.halal = raw[categories.indexOf('halal')] == '1';
+        shop.paymanetTerminal = int.tryParse(raw[categories.indexOf('paymanet_terminal')]) ?? 0;
+        shop.emptySpace = EmptySpace.values.byName(raw[categories.indexOf('empty_space')].toString());
+        shop.yuridicForm = YuridicForm.values.byName(raw[categories.indexOf('yuridic_form')].toString());
+        shop.photoMap['water'] = raw[categories.indexOf('water')].toString();
+        shop.photoMap['juice'] = raw[categories.indexOf('juice')].toString();
+        shop.photoMap['gazirovka'] = raw[categories.indexOf('gazirovka')].toString();
+        shop.photoMap['candyVes'] = raw[categories.indexOf('candy_ves')].toString();
+        shop.photoMap['chocolate'] = raw[categories.indexOf('chocolate')].toString();
+        shop.photoMap['korobkaCandy'] = raw[categories.indexOf('korobka_candy')].toString();
+        shop.photoMap['pirogi'] = raw[categories.indexOf('pirogi')].toString();
+        shop.photoMap['tea'] = raw[categories.indexOf('tea')].toString();
+        shop.photoMap['coffee'] = raw[categories.indexOf('coffee')].toString();
+        shop.photoMap['macarons'] = raw[categories.indexOf('macarons')].toString();
+        shop.photoMap['meatKonserv'] = raw[categories.indexOf('meat_konserv')].toString();
+        shop.photoMap['fishKonserv'] = raw[categories.indexOf('fish_konserv')].toString();
+        shop.photoMap['fruitKonserv'] = raw[categories.indexOf('fruit_konserv')].toString();
+        shop.photoMap['milkKonserv'] = raw[categories.indexOf('milk_konserv')].toString();
+        double secsFromEpoch = double.tryParse(raw[categories.indexOf('report_time')]) ?? 0;
+        DateTime date = DateTime.fromMillisecondsSinceEpoch(
+            secsFromEpoch.toInt() * 1000);
+        _tasksOnWeek.putIfAbsent(date.weekday, () => {});
+        _tasksOnWeek[date.weekday]![shop.id] = shop;
+      // }catch(e){
+      //   print(e.toString());
+      // }
+    }
+    sqlFliteDB.setReports(_tasksOnWeek);
+  }
+
+
+
+
   //ВОПРОСЫ
+
+  void getTasks()
+  {
+    _sendMessage(text:'tasks?user_id=${globalHandler.userId}',reload:true);
+  }
 
   void getCurrentBuild(Function() update)
   {

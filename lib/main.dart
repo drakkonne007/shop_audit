@@ -14,14 +14,16 @@ import 'package:shop_audit/global/internalDatabase.dart';
 import 'package:shop_audit/global/socket_handler.dart';
 import 'package:shop_audit/pages/anketaPage.dart';
 import 'package:shop_audit/pages/camera_handler.dart';
+import 'package:shop_audit/pages/doReport.dart';
 import 'package:shop_audit/pages/load_splash.dart';
 import 'package:shop_audit/pages/login.dart';
 import 'package:shop_audit/pages/new_shop.dart';
 import 'package:shop_audit/pages/photo_page.dart';
 import 'package:shop_audit/pages/map_screen.dart';
 import 'package:shop_audit/pages/shopPage.dart';
+import 'package:shop_audit/pages/tasksListPage.dart';
 
-const int versionApk = 32;
+const int versionApk = 35;
 SharedPreferences? mainShared;
 GlobalHandler globalHandler = GlobalHandler();
 SocketHandler socketHandler = SocketHandler();
@@ -110,6 +112,9 @@ class MyApp extends StatelessWidget
         // '/report': (context) => ReportPage(),
         '/loadSplash': (context) => LoadSplash(),
         '/anketaPage': (context) => AnketaPage(),
+        '/tasksList' : (context) => const TasksListPage(),
+        DoReport.doReport : (context) => const DoReport(),
+
       },
     );
   }

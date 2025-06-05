@@ -39,6 +39,7 @@ class _LoginPageState extends State<LoginPage> {
     _isCorrect = true;
     if(result == true){
       socketHandler.loadShops(true);
+      socketHandler.getTasks();
       Navigator.of(context).pushNamedAndRemoveUntil('/mapScreen', (route) => false);
     }else{
       setState(() {

@@ -13,8 +13,19 @@ import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/global/internalDatabase.dart';
 import 'package:shop_audit/global/socket_handler.dart';
 import 'package:shop_audit/main.dart';
+import 'package:shop_audit/pages/doReport.dart';
 import 'package:yandex_mapkit/yandex_mapkit.dart';
 import 'package:http/http.dart';
+
+const List<String> days = [
+  'Понедельник',
+  'Вторник',
+  'Среда',
+  'Четверг',
+  'Пятница',
+  'Суббота',
+  'Воскресенье'
+];
 
 class MapScreen extends StatefulWidget
 {
@@ -27,12 +38,14 @@ class MapScreen extends StatefulWidget
 class _MapScreenState extends State<MapScreen>
 {
   YandexMapController? _mapController;
-  late Timer _timerSetMyLocation;
   late Timer _timerMeterShop;
+  late Timer _timerRefreshTask;
   bool _isReconnect = false;
   int _mapIdCluster = 0;
   SortType sortType = SortType.none;
-  Point _myLocation = const Point(latitude: 0, longitude: 0);
+  // Point _myLocation = const Point(latitude: 0, longitude: 0);
+  String selectedDay = days[DateTime.now().weekday-1];
+  List<InternalShop> _allList = [];
 
   @override
   void initState()
@@ -43,35 +56,8 @@ class _MapScreenState extends State<MapScreen>
     _timerMeterShop = Timer.periodic(const Duration(minutes: 30), (timer) {
       socketHandler.getConfigMeterShop();
     });
-    _timerSetMyLocation = Timer.periodic(const Duration(seconds: 10), (timer) async{
-      if(await _fetchCurrentLocation()) {
-        // socketHandler.sendMyPosition(globalHandler.currentUserPoint.latitude,
-        //     globalHandler.currentUserPoint.longitude);
-        if(_myLocation.longitude == 0){
-          _myLocation = globalHandler.currentUserPoint;
-        }else{
-          if(Geolocator.distanceBetween(_myLocation.latitude, _myLocation.longitude, globalHandler.currentUserPoint.latitude, globalHandler.currentUserPoint.longitude) > meterShop){
-            _myLocation = globalHandler.currentUserPoint;
-            if(context.mounted) {
-              await showDialog<bool>(
-                context: context,
-                builder: (BuildContext context) =>
-                    AlertDialog(
-                      content: const Text(
-                          'Сделайте фото улицы где вы идёте'),
-                      actions: <Widget>[
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          child: const Text('Ок'),
-                        ),
-                      ],
-                    ),
-              );
-              Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: -1, photoType: PhotoType.tempPhoto));
-            }
-          }
-        }
-      }
+    _timerRefreshTask = Timer.periodic(const Duration(minutes: 1), (timer) {
+      socketHandler.getTasks();
     });
     socketHandler.getCurrentBuild(_downloadFile);
     socketHandler.loadShops(false);
@@ -107,7 +93,8 @@ class _MapScreenState extends State<MapScreen>
   void dispose()
   {
     _timerMeterShop.cancel();
-    _timerSetMyLocation.cancel();
+    // _timerSetMyLocation.cancel();
+    _timerRefreshTask.cancel();
     socketHandler.socketState.removeListener(checkReconnect);
     socketHandler.resendShopList = null;
     sqlFliteDB.shopList.removeListener(nullSetState);
@@ -138,13 +125,13 @@ class _MapScreenState extends State<MapScreen>
   List<PlacemarkMapObject> _createPlaceMark()
   {
     List<PlacemarkMapObject> tempList = [];
-    var source = sqlFliteDB.getFilteredPoints(sortType);
-    for(int i=0;i<source.length;i++) {
+    // var source = sqlFliteDB.getFilteredPoints();
+    for(int i=0;i<_allList.length;i++) {
       final mapObject = PlacemarkMapObject(
-          mapId: MapObjectId('${source[i].id}'),
-          point: Point(latitude: source[i].xCoord, longitude: source[i].yCoord),
+          mapId: MapObjectId('${_allList[i].id}'),
+          point: Point(latitude: _allList[i].xCoord, longitude: _allList[i].yCoord),
           onTap: (PlacemarkMapObject mapObject, Point point) {
-            _shopInfo(context, mapObject);
+            _shopInfo(_allList[i]);
           },
           opacity: 1,
           direction: 0,
@@ -156,7 +143,37 @@ class _MapScreenState extends State<MapScreen>
               scale: 2
           )),
           text: PlacemarkText(
-              text: source[i].shopName,
+              text: _allList[i].shopName,
+              style: const PlacemarkTextStyle(
+                  placement: TextStylePlacement.top,
+                  color: Colors.amber,
+                  outlineColor: Colors.black
+              )
+          )
+      );
+      tempList.add(mapObject);
+    }
+
+    final weeksTasks = List.of(sqlFliteDB.getDayList(selectedDay));
+
+    for(final task in weeksTasks) {
+      final mapObject = PlacemarkMapObject(
+          mapId: MapObjectId('${task.id}  report_shop'),
+          point: Point(latitude: task.xCoord, longitude: task.yCoord),
+          onTap: (PlacemarkMapObject mapObject, Point point) {
+            _shopInfo(task);
+          },
+          opacity: 1,
+          direction: 0,
+          consumeTapEvents: true,
+          isDraggable: false,
+          icon: PlacemarkIcon.single(PlacemarkIconStyle(
+              image: BitmapDescriptor.fromAssetImage(task.hasReport ? 'assets/green_shop.png' : 'assets/red_shop.png'),
+              rotationType: RotationType.noRotation,
+              scale: 2
+          )),
+          text: PlacemarkText(
+              text: task.shopName,
               style: const PlacemarkTextStyle(
                   placement: TextStylePlacement.top,
                   color: Colors.amber,
@@ -180,7 +197,7 @@ class _MapScreenState extends State<MapScreen>
   @override
   Widget build(BuildContext context)
   {
-    var allList = sqlFliteDB.getFilteredPoints(sortType);
+    _allList = sqlFliteDB.getFilteredPoints();
     return Scaffold(
         drawerEnableOpenDragGesture: false,
         drawer: Drawer(
@@ -197,28 +214,44 @@ class _MapScreenState extends State<MapScreen>
                   Expanded(
                       child:
                       ListView.builder(
-                          itemCount: allList.length,
+                          itemCount: _allList.length + sqlFliteDB.getDayList(selectedDay).length,
                           itemBuilder: (BuildContext context, int index) {
+                            InternalShop shop = index < _allList.length ? _allList[index] : sqlFliteDB.getDayList(selectedDay)[index - _allList.length];
                             return Container(
                                 margin: const EdgeInsets.all(2),
                                 decoration: BoxDecoration(
-                                  border: Border.all(width: 1, color: Colors.transparent),
-                                  color: allList[index].hasReport ? Colors.white : allList[index].isSending ? Colors.amber[100] : Colors.red[100],
+                                  border: Border.all(width: 1, color: shop.hasReport ? Colors.red : Colors.transparent),
+                                  color: shop.hasReport ? Colors.white : shop.isSending ? Colors.amber[100] : Colors.red[100],
                                   borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(10), bottomRight: Radius.circular(10)),
-
                                 ),
                                 child:
                                 Row(
                                     children:[
-                                      allList[index].photoMap['externalPhoto']! == '' ? const SizedBox(height: 50,) :
-                                      Image.file(File(allList[index].photoMap['externalPhoto']!), width: 50,height: 50, fit: BoxFit.cover,),
+                                      shop.isReport ? File(shop.reportPhoto).existsSync() ? Image.file(File(shop.reportPhoto), width: 50,height: 50, fit: BoxFit.cover,)
+                                      : const SizedBox(width: 50, height: 50,)
+                                      : getPhotoUniversal(shop.photoMap['externalPhoto'] ?? '', shop.photoMap['rootPath'] ?? '', const Size(50, 50)),
                                       Expanded(
                                           flex: 20,
                                           child: TextButton(
-                                              onPressed:(){
-                                                Navigator.of(context).pushNamed('/shopPage', arguments: CustomArgument(shopId: allList[index].id));
+                                              onPressed:()async{
+                                                if(!await _fetchCurrentLocation()){
+                                                  return;
+                                                }
+                                                if(sqlFliteDB.getDistance(shop) > 50 * 50){
+                                                  customAlertMsg(context, 'Слишком далеко от магазина!');
+                                                  return;
+                                                }
+                                                if(shop.isReport){
+                                                  Navigator.of(context)
+                                                      .pushNamed(DoReport.doReport,
+                                                      arguments: shop);
+                                                }else {
+                                                  Navigator.of(context)
+                                                      .pushNamed('/shopPage',
+                                                      arguments: shop);
+                                                }
                                               },
-                                              child: Text(allList[index].shopName.trim() + "\n" + presentDateTime(DateTime.fromMillisecondsSinceEpoch(allList[index].millisecsSinceEpoch)),
+                                              child: Text(shop.shopName.trim() + "\n" + presentDateTime(DateTime.fromMillisecondsSinceEpoch(shop.millisecsSinceEpoch)),
                                                   style: const TextStyle(
                                                       color: Colors.black)
                                               ))
@@ -227,8 +260,8 @@ class _MapScreenState extends State<MapScreen>
                                         if (Platform.isAndroid) {
                                           AndroidIntent intent = AndroidIntent(
                                             action: 'action_view',
-                                            data: 'geo:${allList[index]
-                                                .xCoord},${allList[index].yCoord}',
+                                            data: 'geo:${shop
+                                                .xCoord},${shop.yCoord}',
                                             package: 'com.google.android.apps.maps',
                                           );
                                           intent.launch();
@@ -236,8 +269,8 @@ class _MapScreenState extends State<MapScreen>
                                       }, icon: const Icon(Icons.map)),
                                       IconButton(onPressed: () {
                                         _moveToCurrentLocation(newPoint: CameraPosition(
-                                            target: Point(latitude: allList[index].xCoord,
-                                                longitude: allList[index].yCoord)));
+                                            target: Point(latitude: shop.xCoord,
+                                                longitude: shop.yCoord)));
                                         Scaffold.of(context).closeDrawer();
                                       }, icon: const Icon(Icons.gps_fixed))
                                     ]
@@ -252,10 +285,9 @@ class _MapScreenState extends State<MapScreen>
                         IconButton(onPressed: () {
                           _logOut(context);
                         }, icon: const Icon(Icons.logout_outlined))
-                        , const Text('Версия $versionApk  ')
+                        , const Text('Версия $versionApk')
                       ]
                   )
-
                 ]
             )
         ),
@@ -279,7 +311,19 @@ class _MapScreenState extends State<MapScreen>
                               backgroundColor:  MaterialStateProperty.all(Colors.green)) : const ButtonStyle(),
                           child: mainShared?.getBool('onRoute') ?? false ? const Text('Стоп') : const Text('Старт')
                       ),
-                      Text('${sqlFliteDB.hasReportCount} отчётов из ${sqlFliteDB.shops.length}'),
+                      DropdownButton<String>(
+                          hint: const Text('Выберите день'),
+                          value: selectedDay,
+                          items: days.map((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            setState(() {
+                              selectedDay = newValue ?? days[DateTime.now().weekday-1];
+                            });}),
                       ElevatedButton(onPressed: () {
                         setState(() {
                           sqlFliteDB.nonReportShops();
@@ -340,7 +384,7 @@ class _MapScreenState extends State<MapScreen>
                         ),
                         innerRings: const []
                     ),
-                    strokeColor: const Color(0x20F0000),
+                    strokeColor: const Color(0x20FF0000),
                     strokeWidth: 3.0,
                     fillColor: const Color(0x20FF0000),
                   )
@@ -358,19 +402,20 @@ class _MapScreenState extends State<MapScreen>
                     onPressed: () async {
                       bool onRoute = mainShared?.getBool('onRoute') ?? false;
                       if(!onRoute){
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Начните маршрут!'),
-                            )
-                        );
+                        customAlertMsg(context, 'Сначала начните маршрут');
                         return;
+                      }
+                      if(await _fetchCurrentLocation()){
+                        Navigator.of(context).pushNamed('/newShop');
+                      }else{
+                        customAlertMsg(context, 'Не могу определить место');
                       }
                       // bool serviceEnabled = await _fetchCurrentLocation();
                       // if(!serviceEnabled){
                       //   await geolocatorPlatform.openLocationSettings();
                       //   return;
                       // }
-                      Navigator.of(context).pushNamed('/newShop');
+
                     }
                 ),
               ),
@@ -384,6 +429,7 @@ class _MapScreenState extends State<MapScreen>
                             heroTag: "btn2",
                             child: const Icon(Icons.zoom_in),
                             onPressed: () async {
+                              socketHandler.getTasks();
                               _mapController?.moveCamera(CameraUpdate.zoomIn());
                             }
                         ),
@@ -493,10 +539,23 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  void _shopInfo(BuildContext context, PlacemarkMapObject mapObject)
+  void _shopInfo(InternalShop shop)async
   {
-    int shopId = int.parse(mapObject.mapId.value);
-    Navigator.of(context).pushNamed('/shopPage', arguments: CustomArgument(shopId: shopId));
+    if(!await _fetchCurrentLocation()){
+      if(context.mounted) {
+        customAlertMsg(context, 'Не получилось определить место');
+      }
+      return;
+    }
+    if(sqlFliteDB.getDistance(shop) > 50 * 50){
+      if(context.mounted) {
+        customAlertMsg(context, 'Слишком далеко от магазина!');
+        return;
+      }
+    }
+    if(context.mounted) {
+      Navigator.of(context).pushNamed('/shopPage', arguments: shop);
+    }
   }
 
   Future<void> _logOut(BuildContext context) async

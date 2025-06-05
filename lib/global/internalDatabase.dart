@@ -4,7 +4,6 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:shop_audit/component/internal_shop.dart';
-import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/main.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite/sqlite_api.dart';
@@ -16,66 +15,121 @@ enum SortType
   dateTimeCreated,
 }
 
+const String newReport = 'CREATE TABLE IF NOT EXISTS report_shop '
+    '(id INTEGER PRIMARY KEY NOT NULL'
+    ',user_id INTEGER NOT NULL'
+    ',report_photo TEXT'
+    ',water TEXT'
+    ',juice TEXT'
+    ',gazirovka TEXT'
+    ',candy_ves TEXT'
+    ',chocolate TEXT'
+    ',korobka_candy TEXT'
+    ',pirogi TEXT'
+    ',tea TEXT'
+    ',coffee TEXT'
+    ',macarons TEXT'
+    ',meat_konserv TEXT'
+    ',fish_konserv TEXT'
+    ',fruit_konserv TEXT'
+    ',milk_konserv TEXT'
+    ',shop_name TEXT NOT NULL'
+    ',shop_type TEXT'
+    ',yuridic_form TEXT'
+    ',has_report INTEGER NOT NULL DEFAULT 0'
+    ',was_sending INTEGER NOT NULL DEFAULT 0'
+    ',address TEXT'
+    ',x REAL'
+    ',y REAL'
+    ',external_photo TEXT'
+    ',shop_label_photo TEXT'
+    ',alkohol_photo TEXT'
+    ',kolbasa_syr TEXT'
+    ',milk TEXT'
+    ',snack TEXT'
+    ',mylomoika TEXT'
+    ',vegetables_fruits TEXT'
+    ',cigarettes TEXT'
+    ',kassovaya_zona TEXT'
+    ',toys TEXT'
+    ',butter TEXT'
+    ',phone_number TEXT'
+    ',shop_square_meter REAL'
+    ',cass_count INTEGER'
+    ',prodavec_manager_count INTEGER'
+    ',halal INTEGER'
+    ',paymanet_terminal INTEGER'
+    ',empty_space TEXT'
+    ',millisecs_since_epoch INTEGER NOT NULL);';
+
+const String newShopSql = 'CREATE TABLE IF NOT EXISTS travel_shop '
+    '(id INTEGER PRIMARY KEY autoincrement NOT NULL'
+    ',user_id INTEGER NOT NULL'
+    ',water TEXT'
+    ',juice TEXT'
+    ',gazirovka TEXT'
+    ',candy_ves TEXT'
+    ',chocolate TEXT'
+    ',korobka_candy TEXT'
+    ',pirogi TEXT'
+    ',tea TEXT'
+    ',coffee TEXT'
+    ',macarons TEXT'
+    ',meat_konserv TEXT'
+    ',fish_konserv TEXT'
+    ',fruit_konserv TEXT'
+    ',milk_konserv TEXT'
+    ',shop_name TEXT NOT NULL'
+    ',shop_type TEXT'
+    ',yuridic_form TEXT'
+    ',has_report INTEGER NOT NULL DEFAULT 0'
+    ',was_sending INTEGER NOT NULL DEFAULT 0'
+    ',address TEXT'
+    ',x REAL'
+    ',y REAL'
+    ',external_photo TEXT'
+    ',shop_label_photo TEXT'
+    ',alkohol_photo TEXT'
+    ',kolbasa_syr TEXT'
+    ',milk TEXT'
+    ',snack TEXT'
+    ',mylomoika TEXT'
+    ',vegetables_fruits TEXT'
+    ',cigarettes TEXT'
+    ',kassovaya_zona TEXT'
+    ',toys TEXT'
+    ',butter TEXT'
+    ',phone_number TEXT'
+    ',shop_square_meter REAL'
+    ',cass_count INTEGER'
+    ',prodavec_manager_count INTEGER'
+    ',halal INTEGER'
+    ',paymanet_terminal INTEGER'
+    ',empty_space TEXT'
+    ',millisecs_since_epoch INTEGER NOT NULL);';
+
 class SqlFliteDB
 {
   Database? _database;
   Map<int, InternalShop> shops = {};
+  Map<int,Map<int,InternalShop>> _tasksOnWeek = {};
   Map<int, InternalShop> filteredShops = {};
-  SortType _sortType = SortType.none;
   int hasReportCount = 0;
+  String _weekDay = '';
   ValueNotifier<int> shopList = ValueNotifier(0); //TODO ЭТО ЗАГЛУШКА ДЛЯ ОБНОВЛЕНИЯ КАРТЫ!!!
 
   void openDb() async
   {
     var databasesPath = await getDatabasesPath();
     String path = join(databasesPath, 'internalShops.db');
-    _database = await openDatabase(path, version: 4,
-        onCreate: (Database db, int v) {
-          db.execute('CREATE TABLE IF NOT EXISTS travel_shop '
-              '(id INTEGER PRIMARY KEY autoincrement NOT NULL'
-              ',user_id INTEGER NOT NULL'
-              ',water TEXT'
-              ',juice TEXT'
-              ',gazirovka TEXT'
-              ',candy_ves TEXT'
-              ',chocolate TEXT'
-              ',korobka_candy TEXT'
-              ',pirogi TEXT'
-              ',tea TEXT'
-              ',coffee TEXT'
-              ',macarons TEXT'
-              ',meat_konserv TEXT'
-              ',fish_konserv TEXT'
-              ',fruit_konserv TEXT'
-              ',milk_konserv TEXT'
-              ',shop_name TEXT NOT NULL'
-              ',shop_type TEXT'
-              ',yuridic_form TEXT'
-              ',has_report INTEGER NOT NULL DEFAULT 0'
-              ',was_sending INTEGER NOT NULL DEFAULT 0'
-              ',address TEXT'
-              ',x REAL'
-              ',y REAL'
-              ',external_photo TEXT'
-              ',shop_label_photo TEXT'
-              ',alkohol_photo TEXT'
-              ',kolbasa_syr TEXT'
-              ',milk TEXT'
-              ',snack TEXT'
-              ',mylomoika TEXT'
-              ',vegetables_fruits TEXT'
-              ',cigarettes TEXT'
-              ',kassovaya_zona TEXT'
-              ',toys TEXT'
-              ',butter TEXT'
-              ',phone_number TEXT'
-              ',shop_square_meter REAL'
-              ',cass_count INTEGER'
-              ',prodavec_manager_count INTEGER'
-              ',halal INTEGER'
-              ',paymanet_terminal INTEGER'
-              ',empty_space TEXT'
-              ',millisecs_since_epoch INTEGER NOT NULL);');
+    _database = await openDatabase(path, version: 10,
+        onCreate: (Database db, int v) async{
+          await db.execute(newShopSql);
+          await db.execute(newReport);
+        }
+        ,onUpgrade: (Database db, int oldVersion, int newVersion) async{
+          await db.execute(newShopSql);
+          await db.execute(newReport);
         });
     // await _database?.execute('DELETE FROM travel_shop');
     getShops();
@@ -83,18 +137,53 @@ class SqlFliteDB
     socketHandler.checkLostReports();
   }
 
-  Future<Map<int, InternalShop>> getShops()async
+  Future<void> getShops()async
   {
     var res = await _database?.rawQuery('SELECT * FROM travel_shop ORDER BY id');
-    if (res == null) {
-      return {};
-    }else{
+    // var resReport = await _database?.rawQuery('SELECT * FROM report ORDER BY id');
+    if(res != null){
       shops = _createShopsFromDB(res);
-      return shops;
     }
   }
 
-  void nonReportShops() async
+  void setReports(Map<int,Map<int, InternalShop>> map)
+  {
+    _tasksOnWeek = map;
+    shopList.notifyListeners();
+  }
+
+  Map<int,InternalShop>  _getDaysMap()
+  {
+    switch(_weekDay){
+      case 'Понедельник': return _tasksOnWeek[1] ?? {};
+      case 'Вторник': return _tasksOnWeek[2] ?? {};
+      case 'Среда': return _tasksOnWeek[3] ?? {};
+      case 'Четверг': return _tasksOnWeek[4] ?? {};
+      case 'Пятница': return _tasksOnWeek[5] ?? {};
+      case 'Суббота': return _tasksOnWeek[6] ?? {};
+      case 'Воскресенье': return _tasksOnWeek[7] ?? {};
+      default: return {};
+    }
+  }
+
+  List<InternalShop> getDayList(String weekDay)
+  {
+    _weekDay = weekDay;
+    switch(weekDay){
+      case 'Понедельник': return _tasksOnWeek[1]?.values.toList(growable: false) ?? [];
+      case 'Вторник': return _tasksOnWeek[2]?.values.toList(growable: false) ?? [];
+      case 'Среда': return _tasksOnWeek[3]?.values.toList(growable: false) ?? [];
+      case 'Четверг': return _tasksOnWeek[4]?.values.toList(growable: false) ?? [];
+      case 'Пятница': return _tasksOnWeek[5]?.values.toList(growable: false) ?? [];
+      case 'Суббота': return _tasksOnWeek[6]?.values.toList(growable: false) ?? [];
+      case 'Воскресенье': return _tasksOnWeek[7]?.values.toList(growable: false) ?? [];
+      default: return [];
+    }
+  }
+
+  // Future<void>
+
+  Future nonReportShops() async
   {
     var res = await _database?.rawQuery('SELECT COUNT(*) as count FROM travel_shop WHERE has_report = true');
     if (res == null) {
@@ -154,6 +243,7 @@ class SqlFliteDB
       shop.photoMap['milkKonserv'] = raw['milk_konserv'] == null ? '' : raw['milk_konserv'].toString();
       temp[shop.id] = shop;
     }
+    print(temp.keys);
     return temp;
   }
 
@@ -161,17 +251,30 @@ class SqlFliteDB
   {
     int? dd = await _database?.rawInsert('INSERT INTO travel_shop(user_id, shop_name, millisecs_since_epoch, shop_type,x,y) VALUES '
         '(${globalHandler.userId},"$shopName", ${DateTime.now().millisecondsSinceEpoch}, "${shopType.name}", ${globalHandler.currentUserPoint.latitude}, ${globalHandler.currentUserPoint.longitude})');
-    if(dd == null || dd == 0) return 0;
-    _sortType = SortType.none;
-    getShops();
-    nonReportShops();
+    if(dd == null || dd == 0){
+      throw 'ERROR IN INTERNAL DB!!!';
+    };
+    await getShops();
+    await nonReportShops();
     shopList.notifyListeners();
     return dd;
   }
 
-  void setPhoto(int shopId, PhotoType type, String path)
+  void setReportPhoto(int shopId, String path)
   {
-    var newShop = shops[shopId]!;
+    var newShop = _getDaysMap()[shopId];
+    if(newShop == null){
+      return;
+    }
+    if(newShop.reportPhoto != '' && File(newShop.reportPhoto).existsSync() && !newShop.reportPhoto.contains('greenGalk')){
+      File(newShop.reportPhoto).deleteSync();
+    }
+    newShop.reportPhoto = path;
+    updateShop(newShop);
+  }
+
+  void setPhoto(InternalShop newShop, PhotoType type, String path)
+  {
     if(newShop.photoMap.containsKey(type.name)) {
       if(File(newShop.photoMap[type.name]!).existsSync() && !newShop.photoMap[type.name]!.contains('greenGalk')){
         File(newShop.photoMap[type.name]!).deleteSync();
@@ -187,11 +290,8 @@ class SqlFliteDB
 
   void updateShop(InternalShop newShop)
   {
-    if(!shops.containsKey(newShop.id)){
-      return;
-    }
     _database?.rawUpdate(''
-        'UPDATE travel_shop SET '
+        'UPDATE ${newShop.isReport ? 'report' : 'travel_shop'} SET '
         'shop_name = "${newShop.shopName}", '
         'x = ${newShop.xCoord}, '
         'y = ${newShop.yCoord}, '
@@ -236,6 +336,9 @@ class SqlFliteDB
         'WHERE id = ${newShop.id}');
     newShop.hasReport = false;
     newShop.isSending = false;
+    if(newShop.isReport){
+      _database?.rawUpdate('UPDATE report SET report_photo = "${newShop.reportPhoto}" WHERE id = ${newShop.id}');
+    }
     shops[newShop.id] = newShop;
     nonReportShops();
     shopList.notifyListeners();
@@ -326,7 +429,7 @@ class SqlFliteDB
           File(shops[id]!.photoMap['milkKonserv']!).deleteSync();
         }
       }catch(e){
-       null;
+        null;
       }
       shops.remove(id);
       nonReportShops();
@@ -376,50 +479,23 @@ class SqlFliteDB
     shopList.notifyListeners();
   }
 
-  List<InternalShop> getFilteredPoints(SortType type)
+  num getDistance(InternalShop a)
   {
-    if(_sortType == SortType.none) {
-      return shops.values.toList(growable: false);
-    }
-    if(_sortType == type) {
-      return filteredShops.values.toList(growable: false);
-    }
-    _sortType = type;
+    final selfLocation = globalHandler.currentUserPoint;
+    return pow(a.xCoord - selfLocation.latitude,2) + pow(a.yCoord - selfLocation.longitude,2);
+  }
+
+  List<InternalShop> getFilteredPoints()
+  {
     List<InternalShop> allList = shops.values.toList(growable: false);
     filteredShops.clear();
-    switch(_sortType){
-      case SortType.none: {
-        for(int i=0;i<allList.length;i++){
-          allList[i].isNeedDrawBySort = true;
-          if(allList[i].xCoord > 0 && allList[i].yCoord > 0) {
-            filteredShops[allList[i].id] = allList[i];
-          }
-        }
-      }
-      case SortType.distance:
-        var selfLocation = globalHandler.currentUserPoint;
-        for(int i=0;i<allList.length;i++){
-          if(sqrt(pow(allList[i].xCoord - selfLocation.latitude,2) + pow(allList[i].yCoord - selfLocation.longitude,2)) *  metersInOneAngle > 5000){
-            allList[i].isNeedDrawBySort = false;
-            continue;
-          }
-          allList[i].isNeedDrawBySort = true;
-          if(allList[i].xCoord != 0 && allList[i].yCoord != 0) {
-            filteredShops[allList[i].id] = allList[i];
-          }
-        }
-      case SortType.dateTimeCreated:
-        for(int i=0;i<allList.length;i++){
-          if(allList[i].millisecsSinceEpoch < DateTime.now().add(const Duration(days: -30)).millisecondsSinceEpoch){
-            allList[i].isNeedDrawBySort = false;
-            continue;
-          }
-          allList[i].isNeedDrawBySort = true;
-          if(allList[i].xCoord != 0 && allList[i].yCoord != 0) {
-            filteredShops[allList[i].id] = allList[i];
-          }
-        }
+
+    allList.sort((a,b) => getDistance(a).compareTo(getDistance(b)));
+
+    for(int i=0;i<allList.length;i++){
+      filteredShops[allList[i].id] = allList[i];
     }
+
     return filteredShops.values.toList(growable: false);
   }
 
