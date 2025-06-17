@@ -30,7 +30,7 @@ class AnketaPage extends StatelessWidget
     phoneNumber.text = shop.phoneNumber;
     cassCount.text = shop.cassCount.toString();
     prodavecCount.text = shop.prodavecManagerCount.toString();
-    terminals.text = shop.paymanetTerminal.toString();
+    terminals.text = shop.paymentTerminal.toString();
     address.text = shop.address;
     emptySpace = shop.emptySpace;
     shopType = shop.shopType;
@@ -53,7 +53,7 @@ class AnketaPage extends StatelessWidget
               shop.address = address.text;
               shop.cassCount = int.tryParse(cassCount.text) ?? 0;
               shop.prodavecManagerCount = int.tryParse(prodavecCount.text) ?? 0;
-              shop.paymanetTerminal = int.tryParse(terminals.text) ?? 0;
+              shop.paymentTerminal = int.tryParse(terminals.text) ?? 0;
               shop.shopSquareMeter = meterSquare ?? 0;
               sqlFliteDB.updateShop(shop);
               Navigator.of(context).pop();

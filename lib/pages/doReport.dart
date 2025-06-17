@@ -22,7 +22,8 @@ class _DoReportState extends State<DoReport>
   @override
   Widget build(BuildContext context)
   {
-    final InternalShop currShop = ModalRoute.of(context)!.settings.arguments as InternalShop;
+    final int index = ModalRoute.of(context)!.settings.arguments as int;
+    InternalShop currShop = sqlFliteDB.getDaysMap()[index]!;
     return Scaffold(
       appBar: AppBar(
         title: Text('Отчёт: ${currShop.shopName}'),
@@ -56,7 +57,7 @@ class _DoReportState extends State<DoReport>
                       Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: currShop.id, photoType: PhotoType.reportPhoto, isFromReport: true));
                     }
                   }else{
-                    Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: currShop.id, photoType: PhotoType.externalPhoto, isFromReport: true));
+                    Navigator.of(context).pushNamed('/photoPage',arguments: CustomArgument(shopId: currShop.id, photoType: PhotoType.reportPhoto, isFromReport: true));
                   }
                 }, child: null,
                     style: const ButtonStyle().copyWith(shape: MaterialStateProperty.all<RoundedRectangleBorder>(const RoundedRectangleBorder()),
@@ -68,12 +69,11 @@ class _DoReportState extends State<DoReport>
                               currShop.reportPhoto == '' ? const SizedBox(height: 100,) : Image.file(File(currShop.reportPhoto),width: 50,height: 100, filterQuality: FilterQuality.none),
                               const Text('Отчётное фото'),
                               Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment: MainAxisAlignment.end,
                                   children:[
-                                    Container(width: 100,),
                                     IconButton(
                                       icon: const Icon(Icons.close_rounded, color: Colors.red,)
-                                      , onPressed: currShop.reportPhoto == '' ? null : ()async{
+                                      , onPressed: currShop.reportPhoto == '' ? (){} : ()async{
                                       bool? isShow = await deletePhoto(context);
                                       setState(() {});
                                       if(isShow != null && isShow){

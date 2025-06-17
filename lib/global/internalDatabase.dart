@@ -19,6 +19,8 @@ const String newReport = 'CREATE TABLE IF NOT EXISTS report_shop '
     '(id INTEGER PRIMARY KEY NOT NULL'
     ',user_id INTEGER NOT NULL'
     ',report_photo TEXT'
+    ',week_day INTEGER NOT NULL'
+    ',folder_path TEXT'
     ',water TEXT'
     ',juice TEXT'
     ',gazirovka TEXT'
@@ -60,7 +62,7 @@ const String newReport = 'CREATE TABLE IF NOT EXISTS report_shop '
     ',halal INTEGER'
     ',paymanet_terminal INTEGER'
     ',empty_space TEXT'
-    ',millisecs_since_epoch INTEGER NOT NULL);';
+    ',millisecs_since_epoch INTEGER DEFAULT 0);';
 
 const String newShopSql = 'CREATE TABLE IF NOT EXISTS travel_shop '
     '(id INTEGER PRIMARY KEY autoincrement NOT NULL'
@@ -122,37 +124,68 @@ class SqlFliteDB
   {
     var databasesPath = await getDatabasesPath();
     String path = join(databasesPath, 'internalShops.db');
-    _database = await openDatabase(path, version: 10,
+    _database = await openDatabase(path, version: 16,
         onCreate: (Database db, int v) async{
           await db.execute(newShopSql);
           await db.execute(newReport);
         }
         ,onUpgrade: (Database db, int oldVersion, int newVersion) async{
+          await db.rawQuery('DROP TABLE IF EXISTS report_shop');
           await db.execute(newShopSql);
           await db.execute(newReport);
         });
     // await _database?.execute('DELETE FROM travel_shop');
-    getShops();
+    await getShops();
+    await loadInternalReports();
     nonReportShops();
-    socketHandler.checkLostReports();
+    // socketHandler.checkLostReports();
+  }
+
+  Future<void> loadInternalReports()async
+  {
+    var resReport = await _database?.rawQuery('SELECT * FROM report_shop ORDER BY id');
+    if(resReport != null){
+      final allList = _createShopsFromDB(resReport);
+      for(final dd in allList.values){
+        print(dd.reportPhoto);
+        dd.isReport = true;
+        _tasksOnWeek.putIfAbsent(dd.weekDay, ()=> {});
+        _tasksOnWeek[dd.weekDay]![dd.id] = dd;
+      }
+    }
   }
 
   Future<void> getShops()async
   {
     var res = await _database?.rawQuery('SELECT * FROM travel_shop ORDER BY id');
-    // var resReport = await _database?.rawQuery('SELECT * FROM report ORDER BY id');
     if(res != null){
       shops = _createShopsFromDB(res);
     }
   }
 
-  void setReports(Map<int,Map<int, InternalShop>> map)
+  void setReports(List<InternalShop> map)async
   {
-    _tasksOnWeek = map;
+    List<InternalShop> newShops = [];
+    for(final shop in map){
+      if(_tasksOnWeek[shop.weekDay] != null && _tasksOnWeek[shop.weekDay]!.containsKey(shop.id)){
+        print('Oh no, old shop_)');
+        continue;
+      }
+      newShops.add(shop);
+      _tasksOnWeek.putIfAbsent(shop.weekDay, ()=> {});
+      _tasksOnWeek[shop.weekDay]![shop.id] = shop;
+    }
+    for(final val in newShops){
+      print('HOHOHO new shop');
+      await _database?.rawQuery('INSERT INTO report_shop(id, week_day,shop_name, user_id, folder_path) VALUES(?,?,?,?,?)', [val.id, val.weekDay
+        , val.shopName, val.userId
+      , val.folderPath]);
+      updateShop(val, notify: false);
+    }
     shopList.notifyListeners();
   }
 
-  Map<int,InternalShop>  _getDaysMap()
+  Map<int,InternalShop>  getDaysMap()
   {
     switch(_weekDay){
       case 'Понедельник': return _tasksOnWeek[1] ?? {};
@@ -170,6 +203,7 @@ class SqlFliteDB
   {
     _weekDay = weekDay;
     switch(weekDay){
+      case 'Понедельник': return _tasksOnWeek[1]?.values.toList(growable: false) ?? [];
       case 'Понедельник': return _tasksOnWeek[1]?.values.toList(growable: false) ?? [];
       case 'Вторник': return _tasksOnWeek[2]?.values.toList(growable: false) ?? [];
       case 'Среда': return _tasksOnWeek[3]?.values.toList(growable: false) ?? [];
@@ -223,7 +257,7 @@ class SqlFliteDB
       shop.cassCount = raw['cass_count'] == null ? 0 : raw['cass_count'] as int;
       shop.prodavecManagerCount = raw['prodavec_manager_count'] == null ? 0 : raw['prodavec_manager_count'] as int;
       shop.halal = raw['halal'] == null ? false : raw['halal'] as int == 1;
-      shop.paymanetTerminal = raw['paymanet_terminal'] == null ? 0 : raw['paymanet_terminal'] as int;
+      shop.paymentTerminal = raw['paymanet_terminal'] == null ? 0 : raw['paymanet_terminal'] as int;
       shop.emptySpace = raw['empty_space'] == null ? EmptySpace.few : EmptySpace.values.byName(raw['empty_space'].toString());
       shop.yuridicForm = raw['yuridic_form'] == null ? YuridicForm.none : YuridicForm.values.byName(raw['yuridic_form'].toString());
       shop.millisecsSinceEpoch = raw['millisecs_since_epoch'] as int;
@@ -241,9 +275,11 @@ class SqlFliteDB
       shop.photoMap['fishKonserv'] = raw['fish_konserv'] == null ? '' : raw['fish_konserv'].toString();
       shop.photoMap['fruitKonserv'] = raw['fruit_konserv'] == null ? '' : raw['fruit_konserv'].toString();
       shop.photoMap['milkKonserv'] = raw['milk_konserv'] == null ? '' : raw['milk_konserv'].toString();
+      shop.weekDay = raw['week_day'] == null ? 0 : raw['week_day'] as int;
+      shop.reportPhoto = raw['report_photo'] == null ? '' : raw['report_photo'].toString();
+      shop.folderPath = raw['folder_path'] == null ? '' : raw['folder_path'].toString();
       temp[shop.id] = shop;
     }
-    print(temp.keys);
     return temp;
   }
 
@@ -262,8 +298,9 @@ class SqlFliteDB
 
   void setReportPhoto(int shopId, String path)
   {
-    var newShop = _getDaysMap()[shopId];
+    var newShop = getDaysMap()[shopId];
     if(newShop == null){
+      print('Ой ой ой');
       return;
     }
     if(newShop.reportPhoto != '' && File(newShop.reportPhoto).existsSync() && !newShop.reportPhoto.contains('greenGalk')){
@@ -288,10 +325,10 @@ class SqlFliteDB
     }
   }
 
-  void updateShop(InternalShop newShop)
+  void updateShop(InternalShop newShop, {bool notify = true})
   {
     _database?.rawUpdate(''
-        'UPDATE ${newShop.isReport ? 'report' : 'travel_shop'} SET '
+        'UPDATE ${newShop.isReport ? 'report_shop' : 'travel_shop'} SET '
         'shop_name = "${newShop.shopName}", '
         'x = ${newShop.xCoord}, '
         'y = ${newShop.yCoord}, '
@@ -329,7 +366,7 @@ class SqlFliteDB
         'halal = ${newShop.halal ? 1 : 0},'
         'has_report = false, '
         'was_sending = false, '
-        'paymanet_terminal = ${newShop.paymanetTerminal},'
+        'paymanet_terminal = ${newShop.paymentTerminal},'
         'shop_type = "${newShop.shopType.name}", '
         'empty_space = "${newShop.emptySpace.name}",'
         'address = "${newShop.address}"'
@@ -337,11 +374,15 @@ class SqlFliteDB
     newShop.hasReport = false;
     newShop.isSending = false;
     if(newShop.isReport){
-      _database?.rawUpdate('UPDATE report SET report_photo = "${newShop.reportPhoto}" WHERE id = ${newShop.id}');
+      _database?.rawUpdate('UPDATE report_shop SET report_photo = "${newShop.reportPhoto}" WHERE id = ${newShop.id}');
+      getDaysMap()[newShop.id] = newShop;
+    }else {
+      shops[newShop.id] = newShop;
     }
-    shops[newShop.id] = newShop;
     nonReportShops();
-    shopList.notifyListeners();
+    if(notify) {
+      shopList.notifyListeners();
+    }
   }
 
   void deleteShop(int id)

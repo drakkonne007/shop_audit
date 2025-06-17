@@ -101,15 +101,15 @@ class DatabaseClient
     //   }catch(e){
     //     connection.execute("UPDATE shop_audit_clear.shop SET x = -2, y = -2 WHERE id = $key");
     //   }
-      // print(ress.items?.first.toponymMetadata?.balloonPoint);
-      // double latitude = ress.items!.first.toponymMetadata!.balloonPoint.latitude;
-      // double longitude = ress.items!.first.toponymMetadata!.balloonPoint.longitude;
-      // print(PointFromDbHandler().pointsFromDb.value[key]!.address);
-      // print(latitude);
-      // print(longitude);
-      // if(latitude != 0 && longitude != 0){
-      //   await connection.execute('UPDATE shop_audit_clear.shop SET x = $latitude, y = $longitude WHERE id = $key');
-      // }
+    //   print(ress.items?.first.toponymMetadata?.balloonPoint);
+    //   double latitude = ress.items!.first.toponymMetadata!.balloonPoint.latitude;
+    //   double longitude = ress.items!.first.toponymMetadata!.balloonPoint.longitude;
+    //   print(PointFromDbHandler().pointsFromDb.value[key]!.address);
+    //   print(latitude);
+    //   print(longitude);
+    //   if(latitude != 0 && longitude != 0){
+    //     await connection.execute('UPDATE shop_audit_clear.shop SET x = $latitude, y = $longitude WHERE id = $key');
+    //   }
     // }
   }
 

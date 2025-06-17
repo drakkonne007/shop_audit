@@ -48,8 +48,8 @@ Future<void> main() async
   sqlFliteDB.openDb();
   CameraHandler().loadCameras();
   // if(await DatabaseClient().openDB()){
-  //   // await DatabaseClient().getShopPoints();
-  //   await DatabaseClient().getReverseShopPoints();
+    // await DatabaseClient().getShopPoints();
+    // await DatabaseClient().getReverseShopPoints();
   // }
   // exit(0);
   mainShared?.setBool('onRoute', false);

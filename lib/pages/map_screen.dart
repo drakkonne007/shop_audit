@@ -61,6 +61,7 @@ class _MapScreenState extends State<MapScreen>
     });
     socketHandler.getCurrentBuild(_downloadFile);
     socketHandler.loadShops(false);
+    socketHandler.getTasks();
     socketHandler.resendShopList = _printResendedReports;
     sqlFliteDB.shopList.addListener(nullSetState);
     super.initState();
@@ -194,6 +195,73 @@ class _MapScreenState extends State<MapScreen>
     customAlertMsg(context, text);
   }
 
+  List<Widget> getAllSmall()
+  {
+    List<Widget> temp = [];
+    for(int i=0;i<_allList.length;i++){
+      InternalShop shop = _allList[i];
+      temp.add(Container(
+          margin: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            border: Border.all(width: 1, color: shop.hasReport ? Colors.red : Colors.transparent),
+            color: shop.hasReport ? Colors.white : shop.isSending ? Colors.amber[100] : Colors.red[100],
+            borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(10), bottomRight: Radius.circular(10)),
+          ),
+          child:
+          Row(
+              children:[
+                shop.isReport ? File(shop.reportPhoto).existsSync() ? Image.file(File(shop.reportPhoto), width: 50,height: 50, fit: BoxFit.cover,)
+                    : const SizedBox(width: 50, height: 50,)
+                    : getPhotoUniversal(shop.photoMap['externalPhoto'] ?? '', shop.photoMap['rootPath'] ?? '', const Size(50, 50)),
+                Expanded(
+                    flex: 20,
+                    child: TextButton(
+                        onPressed:()async{
+                          if(!await _fetchCurrentLocation()){
+                            return;
+                          }
+                          if(sqlFliteDB.getDistance(shop) > 50 * 50){
+                            customAlertMsg(context, 'Слишком далеко от магазина!');
+                            return;
+                          }
+                          if(shop.isReport){
+                            Navigator.of(context)
+                                .pushNamed(DoReport.doReport,
+                                arguments: shop);
+                          }else {
+                            Navigator.of(context)
+                                .pushNamed('/shopPage',arguments: shop);
+                          }
+                        },
+                        child: Text(shop.shopName.trim() + "\n" + presentDateTime(DateTime.fromMillisecondsSinceEpoch(shop.millisecsSinceEpoch)),
+                            style: const TextStyle(
+                                color: Colors.black)
+                        ))
+                ),
+                IconButton(onPressed: (){
+                  if (Platform.isAndroid) {
+                    AndroidIntent intent = AndroidIntent(
+                      action: 'action_view',
+                      data: 'geo:${shop
+                          .xCoord},${shop.yCoord}',
+                      package: 'com.google.android.apps.maps',
+                    );
+                    intent.launch();
+                  }
+                }, icon: const Icon(Icons.map)),
+                IconButton(onPressed: () {
+                  _moveToCurrentLocation(newPoint: CameraPosition(
+                      target: Point(latitude: shop.xCoord,
+                          longitude: shop.yCoord)));
+                  Scaffold.of(context).closeDrawer();
+                }, icon: const Icon(Icons.gps_fixed))
+              ]
+          )
+      ));
+    }
+    return temp;
+  }
+
   @override
   Widget build(BuildContext context)
   {
@@ -201,94 +269,111 @@ class _MapScreenState extends State<MapScreen>
     return Scaffold(
         drawerEnableOpenDragGesture: false,
         drawer: Drawer(
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 35,),
-                  ElevatedButton(
-                    onPressed: () {
-                      sqlFliteDB.resendShops();
-                    },
-                    child: const Text('Отправить всё повторно'),
-                  ),
-                  Expanded(
-                      child:
-                      ListView.builder(
-                          itemCount: _allList.length + sqlFliteDB.getDayList(selectedDay).length,
-                          itemBuilder: (BuildContext context, int index) {
-                            InternalShop shop = index < _allList.length ? _allList[index] : sqlFliteDB.getDayList(selectedDay)[index - _allList.length];
-                            return Container(
+            child: SafeArea(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          sqlFliteDB.resendShops();
+                        },
+                        child: const Text('Отправить всё повторно'),
+                      ),
+                    ),
+                    Expanded(
+                        child:
+                        ListView(
+                          padding: EdgeInsets.zero,
+                            children: [
+                            ExpansionTile(
+                              title: const Text('Свои магазины'),
+                              controlAffinity: ListTileControlAffinity.leading,
+                              children: getAllSmall(),
+                            ),
+                            const Divider(color: Colors.deepOrange,),
+                            const Text('Задания:', textAlign: TextAlign.center, style: TextStyle(fontSize: 20),),
+                            ...sqlFliteDB.getDayList(selectedDay).map((shop) {
+                              return Container(
                                 margin: const EdgeInsets.all(2),
                                 decoration: BoxDecoration(
                                   border: Border.all(width: 1, color: shop.hasReport ? Colors.red : Colors.transparent),
-                                  color: shop.hasReport ? Colors.white : shop.isSending ? Colors.amber[100] : Colors.red[100],
+                                  color: shop.hasReport
+                                      ? Colors.white
+                                      : shop.isSending
+                                      ? Colors.amber[100]
+                                      : Colors.red[100],
                                   borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(10), bottomRight: Radius.circular(10)),
                                 ),
-                                child:
-                                Row(
-                                    children:[
-                                      shop.isReport ? File(shop.reportPhoto).existsSync() ? Image.file(File(shop.reportPhoto), width: 50,height: 50, fit: BoxFit.cover,)
-                                      : const SizedBox(width: 50, height: 50,)
-                                      : getPhotoUniversal(shop.photoMap['externalPhoto'] ?? '', shop.photoMap['rootPath'] ?? '', const Size(50, 50)),
-                                      Expanded(
-                                          flex: 20,
-                                          child: TextButton(
-                                              onPressed:()async{
-                                                if(!await _fetchCurrentLocation()){
-                                                  return;
-                                                }
-                                                if(sqlFliteDB.getDistance(shop) > 50 * 50){
-                                                  customAlertMsg(context, 'Слишком далеко от магазина!');
-                                                  return;
-                                                }
-                                                if(shop.isReport){
-                                                  Navigator.of(context)
-                                                      .pushNamed(DoReport.doReport,
-                                                      arguments: shop);
-                                                }else {
-                                                  Navigator.of(context)
-                                                      .pushNamed('/shopPage',
-                                                      arguments: shop);
-                                                }
-                                              },
-                                              child: Text(shop.shopName.trim() + "\n" + presentDateTime(DateTime.fromMillisecondsSinceEpoch(shop.millisecsSinceEpoch)),
-                                                  style: const TextStyle(
-                                                      color: Colors.black)
-                                              ))
+                                child: Row(
+                                  children: [
+                                    File(shop.reportPhoto).existsSync()
+                                        ? Image.file(File(shop.reportPhoto), width: 50, height: 50, fit: BoxFit.cover)
+                                        : const SizedBox(width: 50, height: 50),
+                                    Expanded(
+                                      flex: 20,
+                                      child: TextButton(
+                                        onPressed: () async {
+                                          if (!await _fetchCurrentLocation()) return;
+                                          if (sqlFliteDB.getDistance(shop) > 50 * 50) {
+                                            customAlertMsg(context, 'Слишком далеко от магазина!');
+                                            return;
+                                          }else{
+                                            print(sqlFliteDB.getDistance(shop));
+                                          }
+                                          if (shop.isReport) {
+                                            Navigator.of(context).pushNamed(DoReport.doReport, arguments: shop.id);
+                                          } else {
+                                            Navigator.of(context).pushNamed('/shopPage', arguments: shop);
+                                          }
+                                        },
+                                        child: Text(
+                                          '${shop.shopName.trim()}\n${presentDateTime(DateTime.fromMillisecondsSinceEpoch(shop.millisecsSinceEpoch))}',
+                                          style: const TextStyle(color: Colors.black),
+                                        ),
                                       ),
-                                      IconButton(onPressed: (){
+                                    ),
+                                    IconButton(
+                                      onPressed: () {
                                         if (Platform.isAndroid) {
                                           AndroidIntent intent = AndroidIntent(
                                             action: 'action_view',
-                                            data: 'geo:${shop
-                                                .xCoord},${shop.yCoord}',
+                                            data: 'geo:${shop.xCoord},${shop.yCoord}',
                                             package: 'com.google.android.apps.maps',
                                           );
                                           intent.launch();
                                         }
-                                      }, icon: const Icon(Icons.map)),
-                                      IconButton(onPressed: () {
+                                      },
+                                      icon: const Icon(Icons.map),
+                                    ),
+                                    IconButton(
+                                      onPressed: () {
                                         _moveToCurrentLocation(newPoint: CameraPosition(
-                                            target: Point(latitude: shop.xCoord,
-                                                longitude: shop.yCoord)));
+                                          target: Point(latitude: shop.xCoord, longitude: shop.yCoord),
+                                        ));
                                         Scaffold.of(context).closeDrawer();
-                                      }, icon: const Icon(Icons.gps_fixed))
-                                    ]
-                                )
-                            );
-                          }
-                      )
-                  ),
-                  Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children:[
-                        IconButton(onPressed: () {
-                          _logOut(context);
-                        }, icon: const Icon(Icons.logout_outlined))
-                        , const Text('Версия $versionApk')
-                      ]
-                  )
-                ]
+                                      },
+                                      icon: const Icon(Icons.gps_fixed),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ],
+                        )
+                    ),
+                    Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children:[
+                          IconButton(onPressed: () {
+                            _logOut(context);
+                          }, icon: const Icon(Icons.logout_outlined))
+                          , const Text('Версия $versionApk')
+                        ]
+                    )
+                  ]
+              ),
             )
         ),
         appBar: AppBar(

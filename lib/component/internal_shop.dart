@@ -65,6 +65,7 @@ class InternalShop
   String yandexAddress = '';
   ShopType shopType = ShopType.none;
   String reportPhoto = '';
+  int weekDay = 1;
   final Map<String,String> photoMap = {
     'water' : '',
     'juice' : '',
@@ -98,7 +99,7 @@ class InternalShop
   int cassCount = 0;
   int prodavecManagerCount = 0;
   bool halal = false;
-  int paymanetTerminal = 0;
+  int paymentTerminal = 0;
   EmptySpace emptySpace = EmptySpace.few;
   YuridicForm yuridicForm = YuridicForm.none;
   int millisecsSinceEpoch = 0;
@@ -113,6 +114,12 @@ class InternalShop
       return true;
     }
     return false;
+  }
+
+  @override
+  String toString()
+  {
+    return shopName;
   }
 
   @override

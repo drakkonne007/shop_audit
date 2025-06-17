@@ -1,7 +1,7 @@
 import 'dart:io';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart';
 import 'package:shop_audit/component/internal_shop.dart';
 import 'package:shop_audit/global/global_variants.dart';
 import 'package:shop_audit/main.dart';
@@ -26,17 +26,7 @@ async {
   );
 }
 
-Widget getPhoto(String photoPath, String rootPath)
-{
-  // rootPath = 'img/imgsForReports/1044124970/';
-  // photoPath = '1749095829.jpeg';
 
-  final Uri ur = Uri.parse('http://www.shop-audit.com/img/imgsForReports/1044124970/1749095829.jpeg');
-
-  return Image.network('http://shop-audit.icu/img/imgsForReports/1044124970/1749095829.jpeg');
-  return File(photoPath).existsSync() ? Image.file(File(photoPath),width: 50,height: 100, filterQuality: FilterQuality.none)
-      : Image.network('http://shop-audit.icu/' + rootPath + photoPath,width: 50,height: 100, filterQuality: FilterQuality.none, errorBuilder: (context, error, stackTrace) => const SizedBox(width: 50,height: 100),);
-}
 
 class ShopPage extends StatefulWidget
 {
@@ -44,7 +34,25 @@ class ShopPage extends StatefulWidget
   State<ShopPage> createState() => _ShopPageState();
 }
 
-class _ShopPageState extends State<ShopPage> {
+class _ShopPageState extends State<ShopPage> 
+{
+
+  Widget getPhoto(String photoPath, String rootPath, double maxWidth)
+  {
+    print(maxWidth);
+    if(photoPath == ''){
+      return SizedBox(width: maxWidth,height: 100);
+    }
+    return File(photoPath).existsSync() ? Image.file(File(photoPath),width: maxWidth,height: 100, filterQuality: FilterQuality.none)
+        : Image.network('http://shop-audit.icu/' + rootPath + photoPath,width: maxWidth,height: 100
+      , loadingBuilder: (context, child, loadingProgress) => loadingProgress == null ? child : const CircularProgressIndicator()
+      , filterQuality: FilterQuality.none
+      , errorBuilder: (context, error, stackTrace) => Container(constraints: const BoxConstraints.expand(height: 100)
+        ,decoration: BoxDecoration(border: Border.all(color: Colors.red, width: 2), borderRadius: BorderRadius.circular(300)),
+        child: Center(child: Text('Фото удалено с сайта', textAlign: TextAlign.center,)),),);
+  }
+  
+  
   @override
   Widget build(BuildContext context)
   {
@@ -165,7 +173,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['externalPhoto']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['externalPhoto']!,currShop.folderPath),
+                                    currShop.photoMap['externalPhoto']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['externalPhoto'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
                                     const Text('Фото снаружи*'),
                                     Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -220,7 +228,7 @@ class _ShopPageState extends State<ShopPage> {
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
-                                      currShop.photoMap['shopLabelPhoto']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['shopLabelPhoto']!,currShop.folderPath),
+                                      currShop.photoMap['shopLabelPhoto']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['shopLabelPhoto'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
 
                                       const Text('Вывеска*'),
                                       Row(
@@ -276,7 +284,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['alkoholPhoto']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['alkoholPhoto']!,currShop.folderPath),
+                                    currShop.photoMap['alkoholPhoto']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['alkoholPhoto'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
                                     const Text('Алкоголь'),
                                     Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -332,7 +340,7 @@ class _ShopPageState extends State<ShopPage> {
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
-                                      currShop.photoMap['butter']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['butter']!,currShop.folderPath),
+                                      currShop.photoMap['butter']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['butter'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
                                       const Text('Хлеб'),
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -394,7 +402,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['kolbasaSyr']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['kolbasaSyr']!,currShop.folderPath),
+                                    currShop.photoMap['kolbasaSyr']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['kolbasaSyr'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
 
                                     const Text('Колбаса и сыр'),
                                     Row(
@@ -452,7 +460,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['milk']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['milk']!,currShop.folderPath),
+                                    currShop.photoMap['milk']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['milk'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
 
                                     const Text('Молочка'),
                                     Row(
@@ -515,7 +523,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['snack']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['snack']!,currShop.folderPath),
+                                    currShop.photoMap['snack']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['snack'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
                                     const Text('Снэки'),
                                     Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -573,7 +581,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['mylomoika']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['mylomoika']!,currShop.folderPath),
+                                    currShop.photoMap['mylomoika']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['mylomoika'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
 
                                     const Text('Мыломойка'),
                                     Row(
@@ -637,7 +645,7 @@ class _ShopPageState extends State<ShopPage> {
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   mainAxisSize: MainAxisSize.max,
                                   children: [
-                                    currShop.photoMap['vegetablesFruits']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['vegetablesFruits']!,currShop.folderPath),
+                                    currShop.photoMap['vegetablesFruits']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['vegetablesFruits'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
 
                                     const Text('Фрукты/Овощи'),
                                     Row(
@@ -696,7 +704,7 @@ class _ShopPageState extends State<ShopPage> {
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    currShop.photoMap['cigarettes']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['cigarettes']!,currShop.folderPath),
+                                    currShop.photoMap['cigarettes']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['cigarettes'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
                                     const Text('Сигареты'),
                                     Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -758,7 +766,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['kassovayaZona']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['kassovayaZona']!,currShop.folderPath),
+                                    currShop.photoMap['kassovayaZona']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['kassovayaZona'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
 
                                     const Text('Касса'),
                                     Row(
@@ -816,7 +824,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['toys']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['toys']!,currShop.folderPath),
+                                    currShop.photoMap['toys']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['toys'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
                                     const Text('Игрушки'),
                                     Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -878,7 +886,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['water']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['water']!,currShop.folderPath),
+                                    currShop.photoMap['water']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['water'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
 
                                     const Text('Вода'),
                                     Row(
@@ -936,7 +944,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['juice']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['juice']!,currShop.folderPath),
+                                    currShop.photoMap['juice']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['juice'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
 
                                     const Text('Соки'),
                                     Row(
@@ -998,7 +1006,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['gazirovka']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['gazirovka']!,currShop.folderPath),
+                                    currShop.photoMap['gazirovka']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['gazirovka'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
 
                                     const Text('Газировка'),
                                     Row(
@@ -1056,7 +1064,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['candyVes']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['candyVes']!,currShop.folderPath),
+                                    currShop.photoMap['candyVes']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['candyVes'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
                                     const Text('Весовые конфеты'),
                                     Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1116,7 +1124,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['chocolate']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['chocolate']!,currShop.folderPath),
+                                    currShop.photoMap['chocolate']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['chocolate'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
 
                                     const Text('Шоколадки'),
                                     Row(
@@ -1174,7 +1182,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['korobkaCandy']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['korobkaCandy']!,currShop.folderPath),
+                                    currShop.photoMap['korobkaCandy']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['korobkaCandy'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
 
                                     const Text('Коробочные конфеты'),
                                     Row(
@@ -1235,7 +1243,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['pirogi']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['pirogi']!,currShop.folderPath),
+                                    currShop.photoMap['pirogi']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['pirogi'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
 
                                     const Text('Вафли, булочки, кексы'),
                                     Row(
@@ -1292,7 +1300,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['tea']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['tea']!,currShop.folderPath),
+                                    currShop.photoMap['tea']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['tea'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
 
                                     const Text('Чай'),
                                     Row(
@@ -1355,7 +1363,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['coffee']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['coffee']!,currShop.folderPath),
+                                    currShop.photoMap['coffee']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['coffee'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
                                     const Text('Кофе'),
                                     Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1411,7 +1419,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['macarons']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['macarons']!,currShop.folderPath),
+                                    currShop.photoMap['macarons']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['macarons'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
 
                                     const Text('Макароны'),
                                     Row(
@@ -1472,7 +1480,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['meatKonserv']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['meatKonserv']!,currShop.folderPath),
+                                    currShop.photoMap['meatKonserv']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['meatKonserv'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
                                     const Text('Мясные консервы'),
                                     Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1528,7 +1536,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['fishKonserv']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['fishKonserv']!,currShop.folderPath),
+                                    currShop.photoMap['fishKonserv']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['fishKonserv'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
                                     const Text('Рыбные консервы'),
                                     Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1589,7 +1597,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['fruitKonserv']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['fruitKonserv']!,currShop.folderPath),
+                                    currShop.photoMap['fruitKonserv']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['fruitKonserv'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
 
                                     const Text('Фруктовые/овощные консервы'),
                                     Row(
@@ -1646,7 +1654,7 @@ class _ShopPageState extends State<ShopPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    currShop.photoMap['milkKonserv']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['milkKonserv']!,currShop.folderPath),
+                                    currShop.photoMap['milkKonserv']! == '' ? const SizedBox(height: 100,) : getPhoto(currShop.photoMap['milkKonserv'] !,currShop.folderPath, MediaQuery.of(context).size.width / 2),
                                     const Text('Сгущёнка'),
                                     Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
