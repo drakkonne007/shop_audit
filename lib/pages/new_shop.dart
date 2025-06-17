@@ -66,7 +66,6 @@ class NewShopPage extends StatelessWidget
                                 ),
                           );
                         }
-                        print('Не нахожу((( $id');
                         Navigator.of(context).popAndPushNamed('/shopPage',arguments: sqlFliteDB.shops[id]!);
                       }
                     }

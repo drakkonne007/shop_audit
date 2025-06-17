@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:path/path.dart';
 import 'package:shop_audit/component/internal_shop.dart';
 import 'package:shop_audit/main.dart';
@@ -147,7 +148,6 @@ class SqlFliteDB
     if(resReport != null){
       final allList = _createShopsFromDB(resReport);
       for(final dd in allList.values){
-        print(dd.reportPhoto);
         dd.isReport = true;
         _tasksOnWeek.putIfAbsent(dd.weekDay, ()=> {});
         _tasksOnWeek[dd.weekDay]![dd.id] = dd;
@@ -168,7 +168,6 @@ class SqlFliteDB
     List<InternalShop> newShops = [];
     for(final shop in map){
       if(_tasksOnWeek[shop.weekDay] != null && _tasksOnWeek[shop.weekDay]!.containsKey(shop.id)){
-        print('Oh no, old shop_)');
         continue;
       }
       newShops.add(shop);
@@ -176,7 +175,6 @@ class SqlFliteDB
       _tasksOnWeek[shop.weekDay]![shop.id] = shop;
     }
     for(final val in newShops){
-      print('HOHOHO new shop');
       await _database?.rawQuery('INSERT INTO report_shop(id, week_day,shop_name, user_id, folder_path) VALUES(?,?,?,?,?)', [val.id, val.weekDay
         , val.shopName, val.userId
       , val.folderPath]);
@@ -300,7 +298,6 @@ class SqlFliteDB
   {
     var newShop = getDaysMap()[shopId];
     if(newShop == null){
-      print('Ой ой ой');
       return;
     }
     if(newShop.reportPhoto != '' && File(newShop.reportPhoto).existsSync() && !newShop.reportPhoto.contains('greenGalk')){
@@ -520,10 +517,20 @@ class SqlFliteDB
     shopList.notifyListeners();
   }
 
-  num getDistance(InternalShop a)
+  double getDistance(InternalShop a)
   {
     final selfLocation = globalHandler.currentUserPoint;
-    return pow(a.xCoord - selfLocation.latitude,2) + pow(a.yCoord - selfLocation.longitude,2);
+
+    print(selfLocation.latitude);
+    print(selfLocation.longitude);
+    print(a.yCoord);
+    print(a.xCoord);
+
+
+    return Geolocator.distanceBetween(selfLocation.latitude,
+      selfLocation.longitude,
+      a.xCoord,
+      a.yCoord,);
   }
 
   List<InternalShop> getFilteredPoints()

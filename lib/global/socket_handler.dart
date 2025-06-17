@@ -615,7 +615,6 @@ class SocketHandler
       question += 'reload=true;';
     }
     question += '$text\x17';
-    print(question);
     _socket.write(question);
   }
 

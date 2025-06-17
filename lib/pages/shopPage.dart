@@ -39,7 +39,6 @@ class _ShopPageState extends State<ShopPage>
 
   Widget getPhoto(String photoPath, String rootPath, double maxWidth)
   {
-    print(maxWidth);
     if(photoPath == ''){
       return SizedBox(width: maxWidth,height: 100);
     }

@@ -316,11 +316,10 @@ class _MapScreenState extends State<MapScreen>
                                       child: TextButton(
                                         onPressed: () async {
                                           if (!await _fetchCurrentLocation()) return;
-                                          if (sqlFliteDB.getDistance(shop) > 50 * 50) {
+                                          if (sqlFliteDB.getDistance(shop) > 100) {
+                                            print(sqlFliteDB.getDistance(shop));
                                             customAlertMsg(context, 'Слишком далеко от магазина!');
                                             return;
-                                          }else{
-                                            print(sqlFliteDB.getDistance(shop));
                                           }
                                           if (shop.isReport) {
                                             Navigator.of(context).pushNamed(DoReport.doReport, arguments: shop.id);
